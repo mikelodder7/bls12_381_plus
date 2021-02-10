@@ -1,6 +1,6 @@
-# bls12_381 [![Crates.io](https://img.shields.io/crates/v/bls12_381.svg)](https://crates.io/crates/bls12_381) #
+# bls12_381_plus [![Crates.io](https://img.shields.io/crates/v/bls12_381_plus.svg)](https://crates.io/crates/bls12_381_plus) #
 
-This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction.
+This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction with [hash to curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html) and multiexponentiation methods like Staus and Pippenger.
 
 * **This implementation has not been reviewed or audited. Use at your own risk.**
 * This implementation targets Rust `1.51` or later.
