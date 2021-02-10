@@ -2,13 +2,14 @@
 authors = [
     "Sean Bowe <ewillbefull@gmail.com>",
     "Jack Grigg <thestr4d@gmail.com>",
+    "Mike Lodder <redmike7@gmail.com>",
 ]
-description = "Implementation of the BLS12-381 pairing-friendly elliptic curve construction"
+description = "Implementation of the BLS12-381 pairing-friendly elliptic curve construction. This is a fork from zkcrypto/bls12_381 but adds hash to curve and multiexponentiation methods"
 documentation = "https://docs.rs/bls12_381/"
-homepage = "https://github.com/zkcrypto/bls12_381"
+homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
-name = "bls12_381"
-repository = "https://github.com/zkcrypto/bls12_381"
+name = "bls12_381_plus"
+repository = "https://github.com/mikelodder7/bls12_381_plus"
 version = "0.5.0"
 edition = "2018"
 
@@ -57,15 +58,17 @@ default-features = false
 version = "2.2.1"
 default-features = false
 
+[dependencies.digest]
+version = "0.9"
+optional = true
+
 [features]
-default = ["groups", "pairings", "alloc", "bits", "endo"]
+default = ["groups", "pairings", "alloc", "bits", "endo", "hashing"]
 bits = ["ff/bits"]
 groups = ["group"]
+hashing = ["digest"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
 experimental = ["digest"]
 nightly = ["subtle/nightly"]
-
-# Deprecated.
-# GLV patents US7110538B2 and US7995752B2 expired in September 2020.
 endo = []
