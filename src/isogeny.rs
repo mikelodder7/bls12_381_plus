@@ -1,10 +1,10 @@
 use crate::{fp::Fp, fp2::Fp2};
 
-mod g1 {
+pub(crate) mod g1 {
     use super::*;
 
     /// Coefficients of the 11-isogeny x map's numerator
-    const XNUM: [Fp; 12] = [
+    pub const XNUM: [Fp; 12] = [
         Fp([
             0xaeac_1662_7346_49b7u64,
             0x5610_c2d5_f2e6_2d6eu64,
@@ -103,7 +103,7 @@ mod g1 {
         ]),
     ];
     /// Coefficients of the 11-isogeny x map's denominator
-    const XDEN: [Fp; 10] = [
+    pub const XDEN: [Fp; 10] = [
         Fp([
             0x993c_f9fa_40d2_1b1cu64,
             0xb558_d681_be34_3df8u64,
@@ -186,7 +186,7 @@ mod g1 {
         ]),
     ];
     /// Coefficients of the 11-isogeny y map's numerator
-    const YNUM: [Fp; 16] = [
+    pub const YNUM: [Fp; 16] = [
         Fp([
             0xbe98_4571_9707_bb33u64,
             0xcd0c_7aee_9b3b_a3c2u64,
@@ -317,7 +317,7 @@ mod g1 {
         ]),
     ];
     /// Coefficients of the 11-isogeny y map's denominator
-    const YDEN: [Fp; 15] = [
+    pub const YDEN: [Fp; 15] = [
         Fp([
             0x0147_9253_b036_63c1u64,
             0x07f3_688e_f60c_206du64,
@@ -441,10 +441,10 @@ mod g1 {
     ];
 }
 
-mod g2 {
+pub(crate) mod g2 {
     use super::*;
     /// Coefficients of the 3-isogeny x map's numerator
-    const XNUM: [Fp2; 4] = [
+    pub const XNUM: [Fp2; 4] = [
         Fp2 {
             c0: Fp([
                 0x6238_aaaa_aaaa_97d6u64,
@@ -519,7 +519,7 @@ mod g2 {
         },
     ];
     /// Coefficients of the 3-isogeny x map's denominator
-    const XDEN: [Fp2; 2] = [
+    pub const XDEN: [Fp2; 2] = [
         Fp2 {
             c0: Fp([
                 0x0000_0000_0000_0000u64,
@@ -558,7 +558,7 @@ mod g2 {
         },
     ];
     /// Coefficients of the 3-isogeny y map's numerator
-    const YNUM: [Fp2; 4] = [
+    pub const YNUM: [Fp2; 4] = [
         Fp2 {
             c0: Fp([
                 0x12cf_c71c_71c6_d706u64,
@@ -633,7 +633,7 @@ mod g2 {
         },
     ];
     /// Coefficients of the 3-isogeny y map's denominator
-    const YDEN: [Fp2; 3] = [
+    pub const YDEN: [Fp2; 3] = [
         Fp2 {
             c0: Fp([
                 0xb9fe_ffff_ffff_a8fbu64,

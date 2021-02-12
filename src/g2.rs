@@ -997,6 +997,61 @@ impl G2Projective {
         (self.y.square() * self.z).ct_eq(&(self.x.square() * self.x + self.z.square() * self.z * B))
             | self.z.is_zero()
     }
+
+    #[cfg(feature = "hashing")]
+    /// Computes the isogeny map for this point
+    pub fn isogeny_map(&self) -> Self {
+        use crate::isogeny::g2::*;
+
+        let coeffs = [&XNUM[..], &XDEN[..], &YNUM[..], &YDEN[..]];
+
+        let mut tmp = [Fp2::zero(); 4];
+        let mut mapvals = [Fp2::zero(); 4];
+
+        // Precompute powers of Z
+        let zpows = {
+            let mut zpows = [Fp2::zero(); 3];
+            zpows[0] = self.z.square(); // z^2
+            zpows[1] = zpows[0].square(); // z^4
+            zpows[2] = zpows[0] * zpows[1]; // z^8
+            zpows
+        };
+
+        for i in 0..4 {
+            let clen = coeffs[i].len() - 1;
+            // Multiply coeffs by powers of Z
+            for j in 0..clen {
+                tmp[j] = coeffs[i][clen - 1 - j] * zpows[j];
+            }
+            // Compute map value with Horner's rule
+            mapvals[i] = coeffs[i][clen];
+            for j in &tmp[..clen] {
+                mapvals[i] *= self.x;
+                mapvals[i] += j;
+            }
+        }
+
+        // x denominator is order 1 less than x numerator, so we need an extra factor of Z^2
+        mapvals[1] *= zpows[0];
+
+        // Multiply result of Y map by the y-coord, y / z^3
+        mapvals[2] *= self.y;
+        mapvals[3] *= self.z;
+        mapvals[3] *= zpows[0];
+
+        // compute Jacobian coordinates of resulting point
+        let mut z = mapvals[1];
+        z *= mapvals[3]; // Zout = xden * yden
+
+        let mut x = mapvals[0] * mapvals[3]; // xnum * yden
+        x *= z; // xnum * xden * yden^2
+
+        let mut y = z.square(); // xden^2 * yden^2
+        y *= mapvals[2]; // ynum * xden^2 * yden^2
+        y *= mapvals[1]; // ynum * xden^3 * yden^2
+
+        Self { x, y, z }
+    }
 }
 
 pub struct G2Compressed([u8; 96]);
