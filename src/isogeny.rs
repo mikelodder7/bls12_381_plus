@@ -1,7 +1,5 @@
-use crate::{fp::Fp, fp2::Fp2};
-
 pub(crate) mod g1 {
-    use super::*;
+    use crate::fp::Fp;
 
     /// Coefficients of the 11-isogeny x map's numerator
     pub const XNUM: [Fp; 12] = [
@@ -442,7 +440,8 @@ pub(crate) mod g1 {
 }
 
 pub(crate) mod g2 {
-    use super::*;
+    use crate::{fp::Fp, fp2::Fp2};
+
     /// Coefficients of the 3-isogeny x map's numerator
     pub const XNUM: [Fp2; 4] = [
         Fp2 {
