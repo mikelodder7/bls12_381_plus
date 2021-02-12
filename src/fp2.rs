@@ -326,7 +326,7 @@ impl Fp2 {
     /// Although this is labeled "vartime", it is only
     /// variable time with respect to the exponent. It
     /// is also not exposed in the public API.
-    pub fn pow_vartime(&self, by: &[u64; 6]) -> Self {
+    pub(crate) fn pow_vartime(&self, by: &[u64; 6]) -> Self {
         let mut res = Self::one();
         for e in by.iter().rev() {
             for i in (0..64).rev() {
@@ -340,20 +340,26 @@ impl Fp2 {
         res
     }
 
-    /// Vartime exponentiation for larger exponents, only
-    /// used in testing and not exposed through the public API.
-    #[cfg(all(test, feature = "experimental"))]
-    pub(crate) fn pow_vartime_extended(&self, by: &[u64]) -> Self {
-        let mut res = Self::one();
-        for e in by.iter().rev() {
-            for i in (0..64).rev() {
-                res = res.square();
+    #[cfg(test)]
+    pub(crate) fn pow<S: AsRef<[u64]>>(&self, exp: S) -> Self {
+        use ff_zeroize::BitIterator;
 
-                if ((*e >> i) & 1) == 1 {
-                    res *= self;
-                }
+        let mut res = Self::one();
+
+        let mut found = false;
+
+        for i in BitIterator::new(exp) {
+            if found {
+                res = res.square();
+            } else {
+                found = i;
+            }
+
+            if i {
+                res *= self;
             }
         }
+
         res
     }
 }
