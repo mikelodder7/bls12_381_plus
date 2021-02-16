@@ -7,6 +7,10 @@ use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
+#[cfg(feature = "hashing")]
+use crate::hash_to_field::ExpandMsg;
+#[cfg(feature = "hashing")]
+use crate::signum::Sgn0Result;
 use crate::util::{adc, mac, sbb};
 
 // The internal representation of this type is six 64-bit unsigned
@@ -260,8 +264,8 @@ impl Fp {
         // that (2^384 - 1)*c is an acceptable product for the reduction. Therefore, the
         // reduction always works so long as `c` is in the field; in this case it is either the
         // constant `R2` or `R3`.
-        let d1 = Fp([limbs[11], limbs[10], limbs[9], limbs[8], limbs[7], limbs[6]]);
-        let d0 = Fp([limbs[5], limbs[4], limbs[3], limbs[2], limbs[1], limbs[0]]);
+        let d1 = Fp([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
+        let d0 = Fp([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
         // Convert to Montgomery form
         d0 * R2 + d1 * R3
     }
@@ -304,7 +308,7 @@ impl Fp {
     /// Although this is labeled "vartime", it is only
     /// variable time with respect to the exponent. It
     /// is also not exposed in the public API.
-    pub fn pow_vartime(&self, by: &[u64; 6]) -> Self {
+    pub(crate) fn pow_vartime(&self, by: &[u64; 6]) -> Self {
         let mut res = Self::one();
         for e in by.iter().rev() {
             for i in (0..64).rev() {
@@ -594,6 +598,64 @@ impl Fp {
         let (t11, _) = adc(t11, 0, carry);
 
         Self::montgomery_reduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11)
+    }
+
+    #[cfg(feature = "hashing")]
+    #[inline]
+    pub(crate) fn sgn0(&self) -> Sgn0Result {
+        if self.0[0] & 1 == 1 {
+            Sgn0Result::Negative
+        } else {
+            Sgn0Result::NonNegative
+        }
+    }
+
+    #[cfg(feature = "hashing")]
+    #[inline]
+    pub(crate) fn negate_if(&mut self, sgn: Sgn0Result) {
+        self.conditional_assign(&self.neg(), Choice::from(sgn.as_u8()));
+    }
+
+    #[cfg(feature = "hashing")]
+    /// Take 64 bytes and compute the result reduced by the field modulus
+    pub(crate) fn from_random_bytes(okm: [u8; 64]) -> Self {
+        Self::from_u768([
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[56..64]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[48..56]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[40..48]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[32..40]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[24..32]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[16..24]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[8..16]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&okm[0..8]).unwrap()),
+            0u64,
+            0u64,
+            0u64,
+            0u64,
+        ])
+    }
+
+    #[cfg(feature = "hashing")]
+    pub(crate) fn hash_to_field<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
+    where
+        X: ExpandMsg,
+    {
+        let mut random_bytes = [0u8; 128];
+        X::expand_message(msg, dst, &mut random_bytes);
+        [
+            Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[..64]).unwrap()),
+            Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[64..]).unwrap()),
+        ]
+    }
+
+    #[cfg(feature = "hashing")]
+    pub(crate) fn encode_to_field<X>(msg: &[u8], dst: &[u8]) -> Fp
+    where
+        X: ExpandMsg,
+    {
+        let mut random_bytes = [0u8; 64];
+        X::expand_message(msg, dst, &mut random_bytes);
+        Fp::from_random_bytes(random_bytes)
     }
 }
 

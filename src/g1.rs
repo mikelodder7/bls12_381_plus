@@ -15,6 +15,8 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 use group::WnafGroup;
 
 use crate::fp::Fp;
+#[cfg(feature = "hashing")]
+use crate::hash_to_field::ExpandMsg;
 use crate::Scalar;
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
@@ -811,8 +813,33 @@ impl G1Projective {
     }
 
     #[cfg(feature = "hashing")]
+    /// Use a random oracle to map a value to a curve point
+    pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
+    where
+        X: ExpandMsg,
+    {
+        {
+            let u = Fp::hash_to_field::<X>(msg, dst);
+            Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
+        }
+        .clear_cofactor()
+    }
+
+    #[cfg(feature = "hashing")]
+    /// Use injective encoding to map a value to a curve point
+    pub fn encode<M, D, X>(msg: M, dst: D) -> Self
+    where
+        M: AsRef<[u8]>,
+        D: AsRef<[u8]>,
+        X: ExpandMsg,
+    {
+        let u = Fp::encode_to_field::<X>(msg.as_ref(), dst.as_ref());
+        Self::osswu_map(&u).isogeny_map().clear_cofactor()
+    }
+
+    #[cfg(feature = "hashing")]
     /// Computes the isogeny map for this point
-    pub fn isogeny_map(&self) -> Self {
+    fn isogeny_map(&self) -> Self {
         use crate::isogeny::g1::*;
 
         let coeffs = [&XNUM[..], &XDEN[..], &YNUM[..], &YDEN[..]];
@@ -873,7 +900,59 @@ impl G1Projective {
         y *= mapvals[2]; // ynum * xden^2 * yden^2
         y *= mapvals[1]; // ynum * xden^3 * yden^2
 
-        Self { x, y, z }
+        let t = Self { x, y, z };
+        println!("{:?}", t);
+        t
+    }
+
+    #[cfg(feature = "hashing")]
+    /// Compute the Simplified SWU for AB == 0
+    fn osswu_map(u: &Fp) -> Self {
+        use crate::osswu_map::{chain_pm3div4, g1::*};
+
+        // compute x0 and g(x0)
+        let [usq, xi_usq, _, x0_num, x0_den, gx0_num, gx0_den] = osswu_help_g1(u);
+
+        // compute g(X0(u)) ^ ((p - 3) // 4)
+        let sqrt_candidate = {
+            let tmp1 = gx0_num * gx0_den; // u * v
+            let mut tmp2 = gx0_den.square(); // v^2
+            tmp2 *= tmp1; // u * v^3
+            let tmp3 = tmp2;
+            chain_pm3div4(&mut tmp2, &tmp3); // (u v^3) ^ ((p - 3) // 4)
+            tmp2 * tmp1 // u v (u v^3) ^ ((p - 3) // 4)
+        };
+
+        // select correct values for y and for x numerator
+        let (mut x_num, mut y) = {
+            let mut test_cand = sqrt_candidate.square();
+            test_cand *= &gx0_den;
+            if test_cand == gx0_num {
+                (x0_num, sqrt_candidate) // g(x0) is square
+            } else {
+                let mut x1_num = x0_num; // g(x1) is square
+                x1_num *= xi_usq; // x1 = xi u^2 g(x0)
+                let mut y1 = usq; // y1 = sqrt(-xi**3) * u^3 g(x0) ^ ((p - 1) // 4)
+                y1 *= u;
+                y1 *= sqrt_candidate;
+                y1 *= SQRT_M_XI_CUBED;
+                (x1_num, y1)
+            }
+        };
+
+        // make sure sign of y and sign of u agree
+        let sgn0_y_xor_u = y.sgn0() ^ u.sgn0();
+        y.negate_if(sgn0_y_xor_u);
+
+        // convert to projective
+        x_num.mul_assign(&x0_den); // x_num * x_den / x_den^2 = x_num / x_den
+        y.mul_assign(&gx0_den); // y * x_den^3 / x_den^3 = y
+
+        Self {
+            x: x_num,
+            y,
+            z: x0_den,
+        }
     }
 }
 

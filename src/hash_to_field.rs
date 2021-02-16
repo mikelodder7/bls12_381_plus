@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 use digest::{
-    generic_array::{typenum::Unsigned, ArrayLength, GenericArray},
+    generic_array::{typenum::Unsigned, GenericArray},
     BlockInput, Digest, ExtendableOutput, Update, XofReader,
 };
 
@@ -8,15 +8,6 @@ use digest::{
 pub trait ExpandMsg {
     /// Expands `msg` to the required number of bytes in `buf`
     fn expand_message(msg: &[u8], dst: &[u8], buf: &mut [u8]);
-}
-
-/// Generate a field element from a random string of bytes
-pub trait FromRO {
-    /// The input length
-    type Length: ArrayLength<u8>;
-
-    /// Convert from random sequence of bytes
-    fn from_random_bytes(okm: &GenericArray<u8, <Self as FromRO>::Length>) -> Self;
 }
 
 /// Placeholder type for implementing expand_message_xof based on a hash function
@@ -68,10 +59,11 @@ where
             .chain([dst.len() as u8])
             .finalize();
 
-        // 144 is the most bytes that will be drawn
-        // G2 requires 64 * 2 for hash_to_curve
-        // if SHA384 is used then 48 * 3 = 144
-        let mut b_vals = [0u8; 144];
+        // 288 is the most bytes that will be drawn
+        // G2 requires 128 * 2 for hash_to_curve
+        // but if a 48 byte digest is used then
+        // 48 * 6 = 288
+        let mut b_vals = [0u8; 288];
         // b_1
         b_vals[..b_in_bytes].copy_from_slice(
             HashT::new()

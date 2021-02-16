@@ -6,6 +6,12 @@ use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::fp::Fp;
+#[cfg(feature = "hashing")]
+use crate::hash_to_field::ExpandMsg;
+#[cfg(feature = "hashing")]
+use crate::signum::Sgn0Result;
+#[cfg(feature = "hashing")]
+use core::convert::TryFrom;
 
 #[derive(Copy, Clone)]
 pub struct Fp2 {
@@ -361,6 +367,55 @@ impl Fp2 {
         }
 
         res
+    }
+
+    #[cfg(feature = "hashing")]
+    #[inline]
+    pub fn sgn0(&self) -> Sgn0Result {
+        if self.c0.is_zero().unwrap_u8() == 1 {
+            self.c1.sgn0()
+        } else {
+            self.c0.sgn0()
+        }
+    }
+
+    #[cfg(feature = "hashing")]
+    #[inline]
+    pub fn negate_if(&mut self, sgn: Sgn0Result) {
+        self.c0.negate_if(sgn);
+        self.c1.negate_if(sgn);
+    }
+
+    #[cfg(feature = "hashing")]
+    /// Take 64 bytes and compute the result reduced by the field modulus
+    fn from_random_bytes(okm: [u8; 128]) -> Self {
+        Self {
+            c0: Fp::from_random_bytes(<[u8; 64]>::try_from(&okm[..64]).unwrap()),
+            c1: Fp::from_random_bytes(<[u8; 64]>::try_from(&okm[64..]).unwrap()),
+        }
+    }
+
+    #[cfg(feature = "hashing")]
+    pub(crate) fn hash_to_field<X>(msg: &[u8], dst: &[u8]) -> [Fp2; 2]
+    where
+        X: ExpandMsg,
+    {
+        let mut random_bytes = [0u8; 256];
+        X::expand_message(msg, dst, &mut random_bytes);
+        [
+            Fp2::from_random_bytes(<[u8; 128]>::try_from(&random_bytes[..128]).unwrap()),
+            Fp2::from_random_bytes(<[u8; 128]>::try_from(&random_bytes[128..]).unwrap()),
+        ]
+    }
+
+    #[cfg(feature = "hashing")]
+    pub(crate) fn encode_to_field<X>(msg: &[u8], dst: &[u8]) -> Fp2
+    where
+        X: ExpandMsg,
+    {
+        let mut random_bytes = [0u8; 128];
+        X::expand_message(msg, dst, &mut random_bytes);
+        Fp2::from_random_bytes(random_bytes)
     }
 }
 

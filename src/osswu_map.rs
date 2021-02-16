@@ -38,6 +38,46 @@ pub(crate) mod g1 {
         0xf9f2bec613031680u64,
         0x03d689d1e0e762ceu64,
     ]);
+
+    #[inline(always)]
+    pub fn osswu_help_g1(u: &Fp) -> [Fp; 7] {
+        let usq = u.square();
+
+        let (nd_common, xi_usq, xi2_u4) = {
+            let tmp = usq * XI; // xi * u^2
+            let tmp2 = tmp.square(); // xi^2 * u^4
+            let tmp3 = tmp + tmp2; // xi^2 * u^4 + xi * u^2
+            (tmp, tmp2, tmp3)
+        };
+
+        let x0_num = {
+            let tmp = nd_common + Fp::one(); // 1 + nd_common
+            tmp * ELLP_B // B * (1 + nd_common)
+        };
+
+        let x0_den = if nd_common.is_zero().unwrap_u8() == 1 {
+            ELLP_A * XI
+        } else {
+            -(ELLP_A * nd_common)
+        };
+
+        // compute g(X0(u))
+        let gx0_den = x0_den.square() + x0_den; //x0_den ^ 3
+
+        let gx0_num = {
+            let mut tmp1 = gx0_den * ELLP_B; // B * x0_den^3
+            let mut tmp2 = x0_den.square(); // x0_den^2
+            tmp2 *= x0_num; // x0_num * x0_den^2
+            tmp2 *= ELLP_A; // A * x0_num * x0_den^2
+            tmp1 *= tmp2; // ^^^ + B * x0_den^3
+            tmp2 = x0_num.square(); // x0_num^2
+            tmp2 *= x0_num; // x0_num^3
+            tmp1 *= tmp2; // x0_num^3 + A * x0_num * x0_den^2 + B * x0_den^3
+            tmp1
+        };
+
+        [usq, xi_usq, xi2_u4, x0_num, x0_den, gx0_num, gx0_den]
+    }
 }
 
 pub(crate) mod g2 {
@@ -249,6 +289,40 @@ pub(crate) mod g2 {
             ]),
         },
     ];
+
+    #[inline(always)]
+    pub fn osswu_help_g2(u: &Fp2) -> [Fp2; 7] {
+        let usq = u.square();
+
+        let (nd_common, xi_usq, xi2_u4) = {
+            let tmp = usq * XI; // xi * u^2
+            let tmp2 = tmp.square(); // xi^2 * u^4
+            let tmp3 = tmp + tmp2; // xi^2 * u^4 + xi * u^2
+            (tmp, tmp2, tmp3)
+        };
+
+        let x0_num = {
+            let tmp = nd_common + Fp2::one(); // 1 + nd_common
+            tmp * ELLP_B // B * (1 + nd_common)
+        };
+
+        let x0_den = if nd_common.is_zero().unwrap_u8() == 1 {
+            ELLP_A * XI
+        } else {
+            -(ELLP_A * nd_common)
+        };
+
+        // compute g(X0(u))
+        let gx0_den = x0_den.square() + x0_den; //x0_den ^ 3
+
+        let gx0_num = {
+            let tmp2 = x0_den.square() * x0_num * ELLP_A; //  A * x0_num * x0_den^2
+            let tmp1 = gx0_den * ELLP_B * tmp2; // ^^^ * B * x0_den^3
+            tmp1 * (x0_num.square() * x0_num) // x0_num^3 + A * x0_num * x0_den^2 + B * x0_den^3
+        };
+
+        [usq, xi_usq, xi2_u4, x0_num, x0_den, gx0_num, gx0_den]
+    }
 }
 
 /* *** addchain for 1000602388805416848354447456433976039139220704984751971333014534031007912622709466110671907282253916009473568139946 *** */
@@ -260,7 +334,7 @@ pub(crate) fn chain_pm3div4(tmpvar1: &mut Fp, tmpvar0: &Fp) {
     let mut tmpvar9 = *tmpvar1;
     tmpvar9 *= tmpvar0;
     //Self::mul(&mut tmpvar9, tmpvar1, tmpvar0);                /*    1 : 3 */
-    let mut tmpvar5 = tmpvar1.square();
+    let tmpvar5 = tmpvar1.square();
     //Self::sqr(&mut tmpvar5, tmpvar1);                         /*    2 : 4 */
     let mut tmpvar2 = tmpvar9;
     tmpvar2 *= *tmpvar1;
