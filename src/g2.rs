@@ -1008,11 +1008,12 @@ impl G2Projective {
         D: AsRef<[u8]>,
         X: ExpandMsg,
     {
-        {
-            let u = Fp2::hash_to_field::<X>(msg.as_ref(), dst.as_ref());
-            Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
-        }
-        .clear_cofactor()
+        // {
+        //     let u = Fp2::hash_to_field::<X>(msg.as_ref(), dst.as_ref());
+        //     Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
+        // }
+        // .clear_cofactor()
+        unimplemented!();
     }
 
     #[cfg(feature = "hashing")]
@@ -1023,8 +1024,9 @@ impl G2Projective {
         D: AsRef<[u8]>,
         X: ExpandMsg,
     {
-        let u = Fp2::encode_to_field::<X>(msg.as_ref(), dst.as_ref());
-        Self::osswu_map(&u).isogeny_map().clear_cofactor()
+        unimplemented!();
+        // let u = Fp2::encode_to_field::<X>(msg.as_ref(), dst.as_ref());
+        // Self::osswu_map(&u).isogeny_map().clear_cofactor()
     }
 
     #[cfg(feature = "hashing")]
@@ -1080,73 +1082,6 @@ impl G2Projective {
         y *= mapvals[1]; // ynum * xden^3 * yden^2
 
         Self { x, y, z }
-    }
-
-    #[cfg(feature = "hashing")]
-    /// Compute the Simplified SWU for AB == 0
-    fn osswu_map(u: &Fp2) -> Self {
-        use crate::osswu_map::{chain_p2m9div16, g2::*};
-        // compute x0 and g(x0)
-        let [usq, xi_usq, xi2_u4, x0_num, x0_den, gx0_num, gx0_den] = osswu_help_g2(u);
-
-        // compute g(x0(u)) ^ ((p - 9) // 16)
-        let sqrt_candidate = {
-            let mut tmp1 = gx0_den.square(); // v^2
-            let mut tmp2 = tmp1.square(); // v^4
-            tmp2 *= tmp1; // v^6
-            tmp2 *= gx0_den; // v^7
-            tmp2 *= gx0_num; // u v^7
-            tmp1 = tmp1.square(); // v^8
-            tmp1 *= tmp2; // u v^15
-            let tmp3 = tmp1;
-            chain_p2m9div16(&mut tmp1, &tmp3); // (u v^15) ^ ((p - 9) // 16)
-            tmp1 * tmp2 // u v^7 (u v^15) ^ ((p - 9) // 16)
-        };
-
-        for root in &ROOTS_OF_UNITY[..] {
-            let mut y0 = *root * sqrt_candidate;
-
-            let mut tmp = y0.square() * gx0_den;
-            if tmp == gx0_num {
-                let sgn0_y_xor_u = y0.sgn0() ^ u.sgn0();
-                y0.negate_if(sgn0_y_xor_u);
-                y0 *= gx0_den; // y * x0_den^3 / x0_den^3 = y
-
-                tmp = x0_num * x0_den; // x0_num * x0_den / x0_den^2 = x0_num / x0_den
-
-                return Self {
-                    x: tmp,
-                    y: y0,
-                    z: x0_den,
-                };
-            }
-        }
-
-        // If we've gotten here, g(X0(u)) is not square. Use X1 instead.
-        let x1_num = x0_num * xi_usq;
-        let gx1_num = xi2_u4 * xi_usq * gx0_num; // xi^3 u^6
-        let sqrt_candidate = sqrt_candidate * usq * u;
-
-        for eta in &ETAS[..] {
-            let mut y1 = *eta * sqrt_candidate;
-
-            let mut tmp = y1.square() * gx0_den;
-            if tmp == gx1_num {
-                let sgn0_y_xor_u = y1.sgn0() ^ u.sgn0();
-                y1.negate_if(sgn0_y_xor_u);
-                y1 *= gx0_den; // y * x0_den^3 / x0_den^3 = y
-
-                tmp = x1_num * x0_den; // x1_num * x0_den / x0_den^2 = x1_num / x0_den
-
-                return Self {
-                    x: tmp,
-                    y: y1,
-                    z: x0_den,
-                };
-            }
-        }
-
-        panic!("Failed to find square root in G2 osswu_map");
     }
 }
 

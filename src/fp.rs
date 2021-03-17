@@ -3,7 +3,7 @@
 
 use core::convert::TryFrom;
 use core::fmt;
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign, BitOr};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -600,10 +600,28 @@ impl Fp {
         Self::montgomery_reduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11)
     }
 
+    /// Returns true whenever value is a square in the field
+    /// using Euler's criterion
+    #[inline]
+    pub fn is_square(&self) -> Choice {
+        const PM1DIV2: [u64; 6] = [
+            0xdcff_7fff_ffff_d555u64,
+            0x0f55_ffff_58a9_ffffu64,
+            0xb398_6950_7b58_7b12u64,
+            0xb23b_a5c2_79c2_895fu64,
+            0x258d_d3db_21a5_d66bu64,
+            0x0d00_88f5_1cbf_f34du64
+        ];
+
+        let res = self.pow_vartime(&PM1DIV2);
+        res.is_zero().bitor(res.ct_eq(&Self::one()))
+    }
+
     #[cfg(feature = "hashing")]
     #[inline]
     pub(crate) fn sgn0(&self) -> Sgn0Result {
-        if self.0[0] & 1 == 1 {
+        let bytes = self.to_bytes();
+        if bytes[47] & 1 == 1 {
             Sgn0Result::Negative
         } else {
             Sgn0Result::NonNegative
@@ -636,7 +654,7 @@ impl Fp {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn hash_to_field<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
+    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
     where
         X: ExpandMsg,
     {
@@ -649,7 +667,7 @@ impl Fp {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn encode_to_field<X>(msg: &[u8], dst: &[u8]) -> Fp
+    pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp
     where
         X: ExpandMsg,
     {
@@ -975,4 +993,46 @@ fn test_lexicographic_largest() {
         ])
         .lexicographically_largest()
     ));
+}
+
+#[test]
+fn gen_constants() {
+    // let three = Fp::one() + Fp::one() + Fp::one();
+    // let mut four = three + Fp::one();
+    // let z = four + four + three;
+    // four = four.invert().unwrap();
+    //
+    // let mut c2 = z.neg();
+    // c2 = c2 * c2 * c2;
+    //
+    // let q = Fp(MODULUS);
+    // let pm1div2 = q - Fp::one();
+    //
+    // println!("z  = {:?}", z);
+    // println!("c1 = {:?}", (q - three) * four);
+    // println!("c2 = {:?}", c2.sqrt().unwrap());
+    // println!("q = {:?}", q);
+    // println!("qm1 = {:?}", pm1div2);
+    // println!("p1div2 = {:?}", pm1div2 * (Fp::one() + Fp::one()).invert().unwrap())
+
+    const A: Fp = Fp([
+        0x5cf4_2808_2d58_4c1du64,
+        0x9893_6f8d_a0e0_f97fu64,
+        0xd8e8_981a_efd8_81acu64,
+        0xb0ea_9853_83ee_66a8u64,
+        0x3d69_3a02_c96d_4982u64,
+        0x0014_4698_a3b8_e943u64,
+    ]);
+    const B: Fp = Fp([
+        0xd1cc_48e9_8e17_2be0u64,
+        0x5a23_215a_316c_eaa5u64,
+        0xa0b9_c14f_cef3_5ef5u64,
+        0x2016_c1f0_f24f_4070u64,
+        0x018b_12e8_753e_ee3bu64,
+        0x12e2_908d_1168_8030u64,
+    ]);
+    const Z: Fp = Fp([ 11, 0, 0, 0, 0, 0 ]);
+
+    println!("C1 = {:?}", (B * A.invert().unwrap()).neg());
+    println!("C2 = {:?}", Z.invert().unwrap().neg());
 }

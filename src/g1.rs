@@ -819,7 +819,7 @@ impl G1Projective {
         X: ExpandMsg,
     {
         {
-            let u = Fp::hash_to_field::<X>(msg, dst);
+            let u = Fp::hash::<X>(msg, dst);
             Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
         }
         .clear_cofactor()
@@ -833,126 +833,126 @@ impl G1Projective {
         D: AsRef<[u8]>,
         X: ExpandMsg,
     {
-        let u = Fp::encode_to_field::<X>(msg.as_ref(), dst.as_ref());
+        let u = Fp::encode::<X>(msg.as_ref(), dst.as_ref());
         Self::osswu_map(&u).isogeny_map().clear_cofactor()
     }
 
     #[cfg(feature = "hashing")]
-    /// Computes the isogeny map for this point
-    fn isogeny_map(&self) -> Self {
+    pub(crate) fn isogeny_map(&self) -> Self {
         use crate::isogeny::g1::*;
 
-        let coeffs = [&XNUM[..], &XDEN[..], &YNUM[..], &YDEN[..]];
-        let mut tmp = [Fp::zero(); 16];
-        let mut mapvals = [Fp::zero(); 4];
-
-        // Precompute powers of Z
-        let zpows = {
-            let mut zpows = [Fp::zero(); 15];
-            zpows[0] = self.z.square(); // z^2
-            zpows[1] = zpows[0].square(); // z^4
-            zpows[2] = zpows[0] * zpows[1]; // z^8
-            zpows[3] = zpows[1].square(); // z^16
-            zpows[4] = zpows[3] * zpows[0]; // z^32
-            zpows[5] = zpows[2].square(); // z^64
-            zpows[6] = zpows[5] * zpows[0]; // z^128
-            zpows[7] = zpows[3].square(); // z^256
-            zpows[8] = zpows[7] * zpows[0]; // z^512
-            zpows[9] = zpows[4].square(); // z^1024
-            zpows[10] = zpows[9] * zpows[0]; // z^2048
-            zpows[11] = zpows[5].square(); // z^4096
-            zpows[12] = zpows[11] * zpows[0]; // z^8192
-            zpows[13] = zpows[6].square(); // z^16384
-            zpows[14] = zpows[13] * zpows[0]; // z^32768
-            zpows
-        };
-
-        for i in 0..4 {
-            let clen = coeffs[i].len() - 1;
-            // Multiply coeffs by powers of Z
-            for j in 0..clen {
-                tmp[j] = coeffs[i][clen - 1 - j] * zpows[j];
+        fn compute(xxs: &[Fp], k: &[Fp]) -> Fp {
+            let mut xx = Fp::zero();
+            for i in 0..k.len() {
+                xx += xxs[i] * k[i];
             }
-            // Compute map value with Horner's rule
-            mapvals[i] = coeffs[i][clen];
-            for j in &tmp[..clen] {
-                mapvals[i] *= self.x;
-                mapvals[i] += j;
-            }
+            xx
         }
 
-        // x denominator is order 1 less than x numerator, so we need an extra factor of Z^2
-        mapvals[1] *= zpows[0];
+        let mut xs = [Fp::one(); 16];
+        xs[1] = self.x;
+        xs[2] = self.x.square();
+        for i in 3..16 {
+            xs[i] = xs[i - 1] * self.x;
+        }
 
-        // Multiply result of Y map by the y-coord, y / z^3
-        mapvals[2] *= self.y;
-        mapvals[3] *= self.z;
-        mapvals[3] *= zpows[0];
+        let x_num = compute(&xs, &XNUM);
+        let x_den = compute(&xs, &XDEN);
+        let y_num = compute(&xs, &YNUM);
+        let y_den = compute(&xs, &YDEN);
 
-        // compute Jacobian coordinates of resulting point
-        let mut z = mapvals[1];
-        z *= mapvals[3]; // Zout = xden * yden
-
-        let mut x = mapvals[0] * mapvals[3]; // xnum * yden
-        x *= z; // xnum * xden * yden^2
-
-        let mut y = z.square(); // xden^2 * yden^2
-        y *= mapvals[2]; // ynum * xden^2 * yden^2
-        y *= mapvals[1]; // ynum * xden^3 * yden^2
-
-        let t = Self { x, y, z };
-        println!("{:?}", t);
-        t
+        let x = x_num * x_den.invert().unwrap();
+        let y = self.y * y_num * y_den.invert().unwrap();
+        Self { x, y, z: Fp::one() }
     }
 
     #[cfg(feature = "hashing")]
-    /// Compute the Simplified SWU for AB == 0
+    /// Optimized simplified swu map for q = 3 mod 4 where AB == 0
     fn osswu_map(u: &Fp) -> Self {
-        use crate::osswu_map::{chain_pm3div4, g1::*};
+        // Taken from section 8.8.1 in
+        // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html>
+        const A: Fp = Fp([
+            0x2f65_aa0e_9af5_aa51u64,
+            0x8646_4c2d_1e84_16c3u64,
+            0xb85c_e591_b7bd_31e2u64,
+            0x27e1_1c91_b5f2_4e7cu64,
+            0x2837_6eda_6bfc_1835u64,
+            0x1554_55c3_e507_1d85u64,
+        ]);
+        const B: Fp = Fp([
+            0xfb99_6971_fe22_a1e0u64,
+            0x9aa9_3eb3_5b74_2d6fu64,
+            0x8c47_6013_de99_c5c4u64,
+            0x873e_27c3_a221_e571u64,
+            0xca72_b5e4_5a52_d888u64,
+            0x0682_4061_418a_386bu64,
+        ]);
+        const C1: [u64; 6] = [
+            0xee7f_bfff_ffff_eaaau64,
+            0x07aa_ffff_ac54_ffffu64,
+            0xd9cc_34a8_3dac_3d89u64,
+            0xd91d_d2e1_3ce1_44afu64,
+            0x92c6_e9ed_90d2_eb35u64,
+            0x0680_447a_8e5f_f9a6u64,
+        ];
+        const C2: Fp = Fp([
+            0x43b5_71ca_d321_5f1fu64,
+            0xccb4_60ef_1c70_2dc2u64,
+            0x742d_884f_4f97_100bu64,
+            0xdb2c_3e32_38a3_382bu64,
+            0xe40f_3fa1_3fce_8f88u64,
+            0x0073_a2af_9892_a2ffu64,
+        ]);
+        const Z: Fp = Fp([
+            0x886c00000023ffdcu64,
+            0xf70008d3090001du64,
+            0x77672417ed5828c3u64,
+            0x9dac23e943dc1740u64,
+            0x50553f1b9c131521u64,
+            0x78c712fbe0ab6e8u64,
+        ]);
+        const XD1: Fp = Fp::mul(&Z, &A);
 
-        // compute x0 and g(x0)
-        let [usq, xi_usq, _, x0_num, x0_den, gx0_num, gx0_den] = osswu_help_g1(u);
+        // tv1 = u^2
+        let tv1 = u.square();
+        // tv3 = Z * tv1
+        let tv3 = Z * tv1;
+        // tv2 = tv3^2
+        let mut tv2 = tv3.square();
+        // xd = tv2 + tv3
+        let mut xd = tv2 + tv3;
+        // x1n = xd + 1
+        let mut x1n = xd + Fp::one();
+        // x1n = x1n * B
+        x1n *= B;
+        // xd = -A * xd
+        xd = (A * xd).neg();
+        // xd = CMOV(xd, Z * A, xd == 0)
+        xd.conditional_assign(&XD1, xd.is_zero());
+        // tv2 = xd^2
+        tv2 = xd.square();
+        let gxd = tv2 * xd;
+        tv2 *= A;
+        let mut gx1 = x1n.square() + tv2;
+        gx1 *= x1n;
+        tv2 = B * gxd;
+        gx1 += tv2;
+        let mut tv4 = gxd.square();
+        tv2 = gx1 * gxd;
+        tv4 *= tv2;
+        let y1 = tv4.pow_vartime(&C1) * tv2;
+        let mut x2n = tv3 * x1n;
+        let mut y2 = y1 * C2 * tv1 * u;
+        tv2 = y1.square() * gxd;
+        let e2 = ((tv2 == gx1) as u8).into();
 
-        // compute g(X0(u)) ^ ((p - 3) // 4)
-        let sqrt_candidate = {
-            let tmp1 = gx0_num * gx0_den; // u * v
-            let mut tmp2 = gx0_den.square(); // v^2
-            tmp2 *= tmp1; // u * v^3
-            let tmp3 = tmp2;
-            chain_pm3div4(&mut tmp2, &tmp3); // (u v^3) ^ ((p - 3) // 4)
-            tmp2 * tmp1 // u v (u v^3) ^ ((p - 3) // 4)
-        };
+        x2n.conditional_assign(&x1n, e2);
+        y2.conditional_assign(&y1, e2);
 
-        // select correct values for y and for x numerator
-        let (mut x_num, mut y) = {
-            let mut test_cand = sqrt_candidate.square();
-            test_cand *= &gx0_den;
-            if test_cand == gx0_num {
-                (x0_num, sqrt_candidate) // g(x0) is square
-            } else {
-                let mut x1_num = x0_num; // g(x1) is square
-                x1_num *= xi_usq; // x1 = xi u^2 g(x0)
-                let mut y1 = usq; // y1 = sqrt(-xi**3) * u^3 g(x0) ^ ((p - 1) // 4)
-                y1 *= u;
-                y1 *= sqrt_candidate;
-                y1 *= SQRT_M_XI_CUBED;
-                (x1_num, y1)
-            }
-        };
+        let e3 = u.sgn0() ^ y2.sgn0();
+        y2.negate_if(e3);
 
-        // make sure sign of y and sign of u agree
-        let sgn0_y_xor_u = y.sgn0() ^ u.sgn0();
-        y.negate_if(sgn0_y_xor_u);
-
-        // convert to projective
-        x_num.mul_assign(&x0_den); // x_num * x_den / x_den^2 = x_num / x_den
-        y.mul_assign(&gx0_den); // y * x_den^3 / x_den^3 = y
-
-        Self {
-            x: x_num,
-            y,
-            z: x0_den,
-        }
+        Self { x: x2n * xd.invert().unwrap(), y: y2, z: Fp::one() }
     }
 }
 
@@ -1773,5 +1773,28 @@ fn test_batch_normalize() {
                 assert_eq!(&t[..], &expected[..]);
             }
         }
+    }
+}
+
+#[cfg(feature = "hashing")]
+#[test]
+fn test_hash() {
+    use crate::hash_to_field::ExpandMsgXmd;
+    use std::convert::TryFrom;
+    const DST: &'static [u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
+
+    let tests: [(&'static [u8], &'static str); 5] = [
+        (b"", "052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a108ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265"),
+        (b"abc", "03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f69030b9c15f3fe6e5cf4211f346271d7b01c8f3b28be689c8429c85b67af215533311f0b8dfaaa154fa6b88176c229f2885d"),
+        (b"abcdef0123456789", "11e0b079dea29a68f0383ee94fed1b940995272407e3bb916bbf268c263ddd57a6a27200a784cbc248e84f357ce82d9803a87ae2caf14e8ee52e51fa2ed8eefe80f02457004ba4d486d6aa1f517c0889501dc7413753f9599b099ebcbbd2d709"),
+        (b"q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", "15f68eaa693b95ccb85215dc65fa81038d69629f70aeee0d0f677cf22285e7bf58d7cb86eefe8f2e9bc3f8cb84fac4881807a1d50c29f430b8cafc4f8638dfeeadf51211e1602a5f184443076715f91bb90a48ba1e370edce6ae1062f5e6dd38"),
+        (b"a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "082aabae8b7dedb0e78aeb619ad3bfd9277a2f77ba7fad20ef6aabdc6c31d19ba5a6d12283553294c1825c4b3ca2dcfe05b84ae5a942248eea39e1d91030458c40153f3b654ab7872d779ad1e942856a20c438e8d99bc8abfbf74729ce1f7ac8"),
+    ];
+
+    for (msg, exp) in &tests {
+        let a = G1Projective::hash::<ExpandMsgXmd<sha2::Sha256>>(msg, DST);
+        let d = <[u8; 96]>::try_from(hex::decode(exp).unwrap().as_slice()).unwrap();;
+        let e= G1Affine::from_uncompressed(&d).unwrap();
+        assert_eq!(a.to_affine(), e);
     }
 }

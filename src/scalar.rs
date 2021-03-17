@@ -1240,3 +1240,21 @@ fn test_double() {
 
     assert_eq!(a.double(), a + a);
 }
+
+#[test]
+fn gen_cs() {
+    let three = Scalar::one() + Scalar::one() + Scalar::one();
+    let mut four = three + Scalar::one();
+    four = four.invert().unwrap();
+
+    println!("c1 = {:?}", (MODULUS - three) * four);
+
+    let z = three.double().double() - Scalar::one();
+    println!("z = {:?}", z);
+
+    let mut c2 = z.pow_vartime(&three.0);
+    c2 = c2.neg();
+    println!("c2 = {:?}", c2.sqrt().unwrap())
+
+
+}
