@@ -87,6 +87,4 @@ mod hash_to_field;
 #[cfg(feature = "hashing")]
 mod isogeny;
 #[cfg(feature = "hashing")]
-mod osswu_map;
-#[cfg(feature = "hashing")]
 mod signum;
