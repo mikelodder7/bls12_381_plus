@@ -88,3 +88,6 @@ mod hash_to_field;
 mod isogeny;
 #[cfg(feature = "hashing")]
 mod signum;
+
+#[cfg(feature = "hashing")]
+pub use hash_to_field::*;
