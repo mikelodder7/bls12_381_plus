@@ -1255,6 +1255,4 @@ fn gen_cs() {
     let mut c2 = z.pow_vartime(&three.0);
     c2 = c2.neg();
     println!("c2 = {:?}", c2.sqrt().unwrap())
-
-
 }

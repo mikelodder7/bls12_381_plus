@@ -1083,6 +1083,8 @@ impl G2Projective {
 
         Self { x, y, z }
     }
+
+    impl_pippenger_sum_of_products!();
 }
 
 pub struct G2Compressed([u8; 96]);

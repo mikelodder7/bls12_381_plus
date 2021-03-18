@@ -952,8 +952,14 @@ impl G1Projective {
         let e3 = u.sgn0() ^ y2.sgn0();
         y2.negate_if(e3);
 
-        Self { x: x2n * xd.invert().unwrap(), y: y2, z: Fp::one() }
+        Self {
+            x: x2n * xd.invert().unwrap(),
+            y: y2,
+            z: Fp::one(),
+        }
     }
+
+    impl_pippenger_sum_of_products!();
 }
 
 pub struct G1Compressed([u8; 48]);
@@ -1793,8 +1799,8 @@ fn test_hash() {
 
     for (msg, exp) in &tests {
         let a = G1Projective::hash::<ExpandMsgXmd<sha2::Sha256>>(msg, DST);
-        let d = <[u8; 96]>::try_from(hex::decode(exp).unwrap().as_slice()).unwrap();;
-        let e= G1Affine::from_uncompressed(&d).unwrap();
+        let d = <[u8; 96]>::try_from(hex::decode(exp).unwrap().as_slice()).unwrap();
+        let e = G1Affine::from_uncompressed(&d).unwrap();
         assert_eq!(a.to_affine(), e);
     }
 }

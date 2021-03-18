@@ -3,7 +3,7 @@
 
 use core::convert::TryFrom;
 use core::fmt;
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign, BitOr};
+use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -610,7 +610,7 @@ impl Fp {
             0xb398_6950_7b58_7b12u64,
             0xb23b_a5c2_79c2_895fu64,
             0x258d_d3db_21a5_d66bu64,
-            0x0d00_88f5_1cbf_f34du64
+            0x0d00_88f5_1cbf_f34du64,
         ];
 
         let res = self.pow_vartime(&PM1DIV2);
@@ -1031,7 +1031,7 @@ fn gen_constants() {
         0x018b_12e8_753e_ee3bu64,
         0x12e2_908d_1168_8030u64,
     ]);
-    const Z: Fp = Fp([ 11, 0, 0, 0, 0, 0 ]);
+    const Z: Fp = Fp([11, 0, 0, 0, 0, 0]);
 
     println!("C1 = {:?}", (B * A.invert().unwrap()).neg());
     println!("C2 = {:?}", Z.invert().unwrap().neg());
