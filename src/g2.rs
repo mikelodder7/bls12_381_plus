@@ -1066,6 +1066,8 @@ impl G2Projective {
 
         Self { x, y, z }
     }
+
+    impl_pippenger_sum_of_products!();
 }
 
 #[derive(Clone, Copy)]
