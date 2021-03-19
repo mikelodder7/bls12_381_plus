@@ -491,6 +491,13 @@ impl G2Affine {
     }
 }
 
+impl_serde!(
+    G2Affine,
+    |p: &G2Affine| p.to_compressed(),
+    |arr: &[u8; 96]| G2Affine::from_compressed(arr),
+    96
+);
+
 /// This is an element of $\mathbb{G}_2$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
@@ -1284,6 +1291,24 @@ impl UncompressedEncoding for G2Affine {
 
     fn to_uncompressed(&self) -> Self::Uncompressed {
         G2Uncompressed(self.to_uncompressed())
+    }
+}
+
+impl serde::Serialize for G2Projective {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_affine().serialize(s)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for G2Projective {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(G2Projective::from(G2Affine::deserialize(deserializer)?))
     }
 }
 

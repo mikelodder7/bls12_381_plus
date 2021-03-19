@@ -417,6 +417,13 @@ impl G1Affine {
     }
 }
 
+impl_serde!(
+    G1Affine,
+    |p: &G1Affine| p.to_compressed(),
+    |arr: &[u8; 48]| G1Affine::from_compressed(arr),
+    48
+);
+
 /// This is an element of $\mathbb{G}_1$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
@@ -550,6 +557,24 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
 impl_binops_additive!(G1Projective, G1Projective);
 impl_binops_multiplicative!(G1Projective, Scalar);
 impl_binops_multiplicative_mixed!(G1Affine, Scalar, G1Projective);
+
+impl serde::Serialize for G1Projective {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_affine().serialize(s)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for G1Projective {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(G1Projective::from(G1Affine::deserialize(deserializer)?))
+    }
+}
 
 #[inline(always)]
 fn mul_by_3b(a: Fp) -> Fp {
