@@ -399,7 +399,7 @@ impl Fp2 {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn hash_to_field<X>(msg: &[u8], dst: &[u8]) -> [Fp2; 2]
+    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp2; 2]
     where
         X: ExpandMsg,
     {
@@ -412,7 +412,7 @@ impl Fp2 {
     }
 
     #[cfg(feature = "hashing")]
-    pub(crate) fn encode_to_field<X>(msg: &[u8], dst: &[u8]) -> Fp2
+    pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp2
     where
         X: ExpandMsg,
     {
