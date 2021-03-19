@@ -66,6 +66,11 @@ default-features = false
 version = "0.9"
 optional = true
 
+[dependencies.serde]
+version = "1.0"
+default-features = false
+features = ["derive"]
+
 [features]
 default = ["groups", "pairings", "alloc", "bits", "hashing"]
 bits = ["ff/bits"]

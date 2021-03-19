@@ -272,3 +272,56 @@ macro_rules! impl_pippenger_sum_of_products {
         }
     };
 }
+
+macro_rules! impl_serde {
+    ($name:ident, $serfunc:expr, $deserfunc:expr, $len:expr) => {
+        impl serde::Serialize for $name {
+            fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                $serfunc(self).serialize(s)
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<$name, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct ByteArrayVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for ByteArrayVisitor {
+                    type Value = $name;
+
+                    fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                        write!(f, "an array of {} bytes", $len)
+                    }
+
+                    fn visit_seq<A>(self, mut seq: A) -> Result<$name, A::Error>
+                    where
+                        A: serde::de::SeqAccess<'de>,
+                    {
+                        let mut arr = [0u8; $len];
+                        for i in 0..arr.len() {
+                            arr[i] = seq
+                                .next_element()?
+                                .ok_or_else(|| serde::de::Error::invalid_length(i, &self))?;
+                        }
+                        let p = $deserfunc(&arr);
+                        if p.is_some().unwrap_u8() == 1 {
+                            Ok(p.unwrap())
+                        } else {
+                            Err(serde::de::Error::invalid_value(
+                                serde::de::Unexpected::Bytes(&arr),
+                                &self,
+                            ))
+                        }
+                    }
+                }
+
+                deserializer.deserialize_tuple($len, ByteArrayVisitor)
+            }
+        }
+    };
+}

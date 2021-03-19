@@ -210,6 +210,13 @@ impl Default for Scalar {
 #[cfg(feature = "zeroize")]
 impl zeroize::DefaultIsZeroes for Scalar {}
 
+impl_serde!(
+    Scalar,
+    |s: &Scalar| s.to_bytes(),
+    |arr: &[u8; 32]| Scalar::from_bytes(arr),
+    32
+);
+
 impl Scalar {
     /// Returns zero, the additive identity.
     #[inline]
@@ -786,6 +793,18 @@ where
         I: Iterator<Item = T>,
     {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
+    }
+}
+
+impl<T> core::iter::Product<T> for Scalar
+where
+    T: core::borrow::Borrow<Scalar>,
+{
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = T>,
+    {
+        iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
