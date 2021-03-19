@@ -1009,31 +1009,33 @@ impl G2Projective {
 
     #[cfg(feature = "hashing")]
     /// Use a random oracle to map a value to a curve point
-    pub fn hash_to_curve<M, D, X>(msg: M, dst: D) -> Self
+    pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        M: AsRef<[u8]>,
-        D: AsRef<[u8]>,
         X: ExpandMsg,
     {
-        // {
-        //     let u = Fp2::hash_to_field::<X>(msg.as_ref(), dst.as_ref());
-        //     Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
-        // }
-        // .clear_cofactor()
-        unimplemented!();
+        {
+            let u = Fp2::hash::<X>(msg.as_ref(), dst.as_ref());
+            Self::osswu_map(&u[0]).isogeny_map() + Self::osswu_map(&u[1]).isogeny_map()
+        }
+        .clear_cofactor()
     }
 
     #[cfg(feature = "hashing")]
     /// Use injective encoding to map a value to a curve point
-    pub fn encode_to_curve<M, D, X>(msg: M, dst: D) -> Self
+    pub fn encode<M, D, X>(msg: M, dst: D) -> Self
     where
         M: AsRef<[u8]>,
         D: AsRef<[u8]>,
         X: ExpandMsg,
     {
+        let u = Fp2::encode::<X>(msg.as_ref(), dst.as_ref());
+        Self::osswu_map(&u).isogeny_map().clear_cofactor()
+    }
+
+    #[cfg(feature = "hashing")]
+    /// Optimized simplified swu map for q = 9 mod 16 where AB == 0
+    fn osswu_map(_u: &Fp2) -> Self {
         unimplemented!();
-        // let u = Fp2::encode_to_field::<X>(msg.as_ref(), dst.as_ref());
-        // Self::osswu_map(&u).isogeny_map().clear_cofactor()
     }
 
     #[cfg(feature = "hashing")]
@@ -1041,54 +1043,31 @@ impl G2Projective {
     fn isogeny_map(&self) -> Self {
         use crate::isogeny::g2::*;
 
-        let coeffs = [&XNUM[..], &XDEN[..], &YNUM[..], &YDEN[..]];
-
-        let mut tmp = [Fp2::zero(); 4];
-        let mut mapvals = [Fp2::zero(); 4];
-
-        // Precompute powers of Z
-        let zpows = {
-            let mut zpows = [Fp2::zero(); 3];
-            zpows[0] = self.z.square(); // z^2
-            zpows[1] = zpows[0].square(); // z^4
-            zpows[2] = zpows[0] * zpows[1]; // z^8
-            zpows
-        };
-
-        for i in 0..4 {
-            let clen = coeffs[i].len() - 1;
-            // Multiply coeffs by powers of Z
-            for j in 0..clen {
-                tmp[j] = coeffs[i][clen - 1 - j] * zpows[j];
+        fn compute(xxs: &[Fp2], k: &[Fp2]) -> Fp2 {
+            let mut xx = Fp2::zero();
+            for i in 0..k.len() {
+                xx += xxs[i] * k[i];
             }
-            // Compute map value with Horner's rule
-            mapvals[i] = coeffs[i][clen];
-            for j in &tmp[..clen] {
-                mapvals[i] *= self.x;
-                mapvals[i] += j;
-            }
+            xx
         }
 
-        // x denominator is order 1 less than x numerator, so we need an extra factor of Z^2
-        mapvals[1] *= zpows[0];
+        let mut xs = [Fp2::one(); 4];
+        xs[1] = self.x;
+        xs[2] = self.x.square();
+        xs[3] = xs[2] * self.x;
 
-        // Multiply result of Y map by the y-coord, y / z^3
-        mapvals[2] *= self.y;
-        mapvals[3] *= self.z;
-        mapvals[3] *= zpows[0];
+        let x_num = compute(&xs, &XNUM);
+        let x_den = compute(&xs, &XDEN);
+        let y_num = compute(&xs, &YNUM);
+        let y_den = compute(&xs, &YDEN);
 
-        // compute Jacobian coordinates of resulting point
-        let mut z = mapvals[1];
-        z *= mapvals[3]; // Zout = xden * yden
-
-        let mut x = mapvals[0] * mapvals[3]; // xnum * yden
-        x *= z; // xnum * xden * yden^2
-
-        let mut y = z.square(); // xden^2 * yden^2
-        y *= mapvals[2]; // ynum * xden^2 * yden^2
-        y *= mapvals[1]; // ynum * xden^3 * yden^2
-
-        Self { x, y, z }
+        let x = x_num * x_den.invert().unwrap();
+        let y = self.y * y_num * y_den.invert().unwrap();
+        Self {
+            x,
+            y,
+            z: Fp2::one(),
+        }
     }
 
     impl_pippenger_sum_of_products!();
