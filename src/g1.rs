@@ -852,13 +852,11 @@ impl G1Projective {
 
     #[cfg(feature = "hashing")]
     /// Use injective encoding to map a value to a curve point
-    pub fn encode<M, D, X>(msg: M, dst: D) -> Self
+    pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        M: AsRef<[u8]>,
-        D: AsRef<[u8]>,
         X: ExpandMsg,
     {
-        let u = Fp::encode::<X>(msg.as_ref(), dst.as_ref());
+        let u = Fp::encode::<X>(msg, dst);
         Self::osswu_map(&u).isogeny_map().clear_cofactor()
     }
 
@@ -947,19 +945,17 @@ impl G1Projective {
         // xd = tv2 + tv3
         let mut xd = tv2 + tv3;
         // x1n = xd + 1
-        let mut x1n = xd + Fp::one();
         // x1n = x1n * B
-        x1n *= B;
+        let x1n = (xd + Fp::one()) * B;
         // xd = -A * xd
-        xd = (A * xd).neg();
+        xd *= A.neg();
         // xd = CMOV(xd, Z * A, xd == 0)
         xd.conditional_assign(&XD1, xd.is_zero());
         // tv2 = xd^2
         tv2 = xd.square();
         let gxd = tv2 * xd;
         tv2 *= A;
-        let mut gx1 = x1n.square() + tv2;
-        gx1 *= x1n;
+        let mut gx1 = (x1n.square() + tv2) * x1n;
         tv2 = B * gxd;
         gx1 += tv2;
         let mut tv4 = gxd.square();

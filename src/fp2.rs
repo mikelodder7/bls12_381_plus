@@ -253,6 +253,13 @@ impl Fp2 {
         }
     }
 
+    pub const fn double(&self) -> Fp2 {
+        Fp2 {
+            c0: self.c0.double(),
+            c1: self.c1.double(),
+        }
+    }
+
     pub fn sqrt(&self) -> CtOption<Self> {
         // Algorithm 9, https://eprint.iacr.org/2012/685.pdf
         // with constant time modifications.
@@ -343,29 +350,6 @@ impl Fp2 {
                 }
             }
         }
-        res
-    }
-
-    #[cfg(test)]
-    pub(crate) fn pow<S: AsRef<[u64]>>(&self, exp: S) -> Self {
-        use ff_zeroize::BitIterator;
-
-        let mut res = Self::one();
-
-        let mut found = false;
-
-        for i in BitIterator::new(exp) {
-            if found {
-                res = res.square();
-            } else {
-                found = i;
-            }
-
-            if i {
-                res *= self;
-            }
-        }
-
         res
     }
 

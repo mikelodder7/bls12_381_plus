@@ -502,6 +502,11 @@ impl Fp {
         (&Fp([r6, r7, r8, r9, r10, r11])).subtract_p()
     }
 
+    #[inline(always)]
+    pub const fn double(&self) -> Fp {
+        Fp::add(&self, &self)
+    }
+
     #[inline]
     pub const fn mul(&self, rhs: &Fp) -> Fp {
         let (t0, carry) = mac(0, self.0[0], rhs.0[0], 0);
