@@ -67,6 +67,9 @@ version = "1.0"
 default-features = false
 features = ["derive"]
 
+[dependencies.zeroize]
+version = "1.2"
+
 [features]
 default = ["groups", "pairings", "alloc", "bits", "endo", "hashing"]
 bits = ["ff/bits"]
