@@ -296,6 +296,29 @@ impl Scalar {
         ])
     }
 
+    /// Read from output of a KDF
+    pub fn from_okm(bytes: &[u8; 48]) -> Scalar {
+        const F_2_192: Scalar = Scalar([
+            0x5947_6ebc_41b4_528fu64,
+            0xc5a3_0cb2_43fc_c152u64,
+            0x2b34_e639_40cc_bd72u64,
+            0x1e17_9025_ca24_7088u64,
+        ]);
+        let d0 = Scalar([
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
+            0,
+        ]);
+        let d1 = Scalar([
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[40..48]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[32..40]).unwrap()),
+            u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap()),
+            0,
+        ]);
+        (d0 * R2) * F_2_192 + d1 * R2
+    }
+
     fn from_u512(limbs: [u64; 8]) -> Scalar {
         // We reduce an arbitrary 512-bit number by decomposing it into two 256-bit digits
         // with the higher bits multiplied by 2^256. Thus, we perform two reductions
@@ -1252,6 +1275,22 @@ fn test_double() {
     ]);
 
     assert_eq!(a.double(), a + a);
+}
+
+
+#[test]
+fn test_from_okm() {
+    let okm = [
+        155, 244, 205, 103, 163, 209, 47, 21, 160, 157, 37, 214, 5, 190, 2, 104, 223, 213, 41, 196,
+        96, 200, 48, 201, 176, 145, 160, 209, 98, 168, 107, 154, 167, 197, 41, 218, 168, 132, 185,
+        95, 111, 233, 85, 102, 45, 243, 24, 145,
+    ];
+    let expected = [
+        184, 141, 14, 25, 196, 12, 5, 65, 222, 229, 103, 132, 86, 28, 224, 249, 100, 61, 100, 238,
+        234, 250, 153, 140, 126, 148, 80, 19, 66, 92, 178, 14,
+    ];
+    let actual = Scalar::from_okm(&okm).to_bytes();
+    assert_eq!(actual, expected)
 }
 
 #[cfg(feature = "zeroize")]
