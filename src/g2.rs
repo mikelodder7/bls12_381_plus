@@ -1010,7 +1010,7 @@ impl G2Projective {
     #[cfg(feature = "hashing")]
     /// Use a random oracle to map a value to a curve point
     /// TODO: Make public once it works
-    fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
+    pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
         X: ExpandMsg,
     {
