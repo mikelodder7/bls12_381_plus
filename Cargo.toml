@@ -70,6 +70,9 @@ features = ["derive"]
 [dependencies.zeroize]
 version = "1.2"
 
+[dependencies.heapless]
+version = "0.6"
+
 [features]
 default = ["groups", "pairings", "alloc", "bits", "endo", "hashing"]
 bits = ["ff/bits"]

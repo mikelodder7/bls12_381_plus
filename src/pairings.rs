@@ -9,13 +9,11 @@ use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use group::Group;
+use heapless::{consts::*, Vec};
 use pairing::{Engine, PairingCurveAffine};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use pairing::MultiMillerLoop;
 
 /// Represents results of a Miller loop, one of the most expensive portions
@@ -452,8 +450,7 @@ impl Group for Gt {
     }
 }
 
-#[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "pairings", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "pairings"))))]
 #[derive(Clone, Debug)]
 /// This structure contains cached computations pertaining to a $\mathbb{G}_2$
 /// element as part of the pairing function (specifically, the Miller loop) and
@@ -462,19 +459,18 @@ impl Group for Gt {
 /// conjunction with the [`multi_miller_loop`](crate::multi_miller_loop)
 /// function provided by this crate.
 ///
-/// Requires the `alloc` and `pairing` crate features to be enabled.
+/// Requires the `pairing` crate features to be enabled.
 pub struct G2Prepared {
     infinity: Choice,
-    coeffs: Vec<(Fp2, Fp2, Fp2)>,
+    coeffs: Vec<(Fp2, Fp2, Fp2), U68>,
 }
 
-#[cfg(feature = "alloc")]
 impl From<G2Affine> for G2Prepared {
     fn from(q: G2Affine) -> G2Prepared {
         struct Adder {
             cur: G2Projective,
             base: G2Affine,
-            coeffs: Vec<(Fp2, Fp2, Fp2)>,
+            coeffs: Vec<(Fp2, Fp2, Fp2), U68>,
         }
 
         impl MillerLoopDriver for Adder {
@@ -482,11 +478,15 @@ impl From<G2Affine> for G2Prepared {
 
             fn doubling_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = doubling_step(&mut self.cur);
-                self.coeffs.push(coeffs);
+                self.coeffs
+                    .push(coeffs)
+                    .expect("Not enough allocated space");
             }
             fn addition_step(&mut self, _: Self::Output) -> Self::Output {
                 let coeffs = addition_step(&mut self.cur, &self.base);
-                self.coeffs.push(coeffs);
+                self.coeffs
+                    .push(coeffs)
+                    .expect("Not enough allocated space");
             }
             fn square_output(_: Self::Output) -> Self::Output {}
             fn conjugate(_: Self::Output) -> Self::Output {}
@@ -499,7 +499,7 @@ impl From<G2Affine> for G2Prepared {
         let mut adder = Adder {
             cur: G2Projective::from(q),
             base: q,
-            coeffs: Vec::with_capacity(68),
+            coeffs: Vec::new(),
         };
 
         miller_loop(&mut adder);
@@ -513,12 +513,11 @@ impl From<G2Affine> for G2Prepared {
     }
 }
 
-#[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "pairings", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "pairings"))))]
 /// Computes $$\sum_{i=1}^n \textbf{ML}(a_i, b_i)$$ given a series of terms
 /// $$(a_1, b_1), (a_2, b_2), ..., (a_n, b_n).$$
 ///
-/// Requires the `alloc` and `pairing` crate features to be enabled.
+/// Requires the `pairing` crate features to be enabled.
 pub fn multi_miller_loop(terms: &[(&G1Affine, &G2Prepared)]) -> MillerLoopResult {
     struct Adder<'a, 'b, 'c> {
         terms: &'c [(&'a G1Affine, &'b G2Prepared)],
@@ -781,7 +780,6 @@ impl pairing::MillerLoopResult for MillerLoopResult {
     }
 }
 
-#[cfg(feature = "alloc")]
 impl MultiMillerLoop for Bls12 {
     type G2Prepared = G2Prepared;
     type Result = MillerLoopResult;
@@ -834,7 +832,6 @@ fn test_unitary() {
     assert_eq!(q, r);
 }
 
-#[cfg(feature = "alloc")]
 #[test]
 fn test_multi_miller_loop() {
     let a1 = G1Affine::generator();

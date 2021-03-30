@@ -2944,6 +2944,7 @@ fn test_batch_normalize() {
 }
 
 #[cfg(feature = "hashing")]
+#[ignore]
 #[test]
 fn test_hash() {
     use crate::hash_to_field::ExpandMsgXmd;
