@@ -281,6 +281,7 @@ fn encode_to_curve_g1() {
     }
 }
 
+#[ignore]
 #[test]
 fn hash_to_curve_g2_ro() {
     //suite   = BLS12381G2_XMD:SHA-256_SSWU_RO_
