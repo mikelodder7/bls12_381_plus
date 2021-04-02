@@ -4,8 +4,12 @@ authors = [
     "Jack Grigg <thestr4d@gmail.com>",
     "Mike Lodder <redmike7@gmail.com>",
 ]
-description = "Implementation of the BLS12-381 pairing-friendly elliptic curve construction. This is a fork from zkcrypto/bls12_381 but adds hash to curve and multiexponentiation methods"
-documentation = "https://docs.rs/bls12_381/"
+description = """
+Implementation of the BLS12-381 pairing-friendly elliptic curve construction.
+This is a fork from zkcrypto/bls12_381 but adds hash to curve and multiexponentiation methods
+as well as enables multi-pairing without the allocator requirement.
+"""
+documentation = "https://docs.rs/bls12_381_plus/"
 homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"

@@ -1,6 +1,6 @@
 # bls12_381_plus [![Crates.io](https://img.shields.io/crates/v/bls12_381_plus.svg)](https://crates.io/crates/bls12_381_plus) #
 
-This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction with [hash to curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html) and multiexponentiation methods like Staus and Pippenger.
+This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction with [hash to curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html) and multiexponentiation methods like Straus and Pippenger.
 
 * **This implementation has not been reviewed or audited. Use at your own risk.**
 * This implementation targets Rust `1.51` or later.
@@ -11,8 +11,9 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 
 * `bits` (on by default): Enables APIs for obtaining bit iterators for scalars.
 * `groups` (on by default): Enables APIs for performing group arithmetic with G1, G2, and GT.
-* `pairings` (on by default): Enables some APIs for performing pairings.
-* `alloc` (on by default): Enables APIs that require an allocator; these include pairing optimizations.
+* `pairings` (on by default): Enables APIs for performing pairings.
+* `hashing` (on by default): Enables hash to curve methods as defined by [IETF](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1).
+* `alloc` (on by default): Enables APIs that require an allocator.
 * `nightly`: Enables `subtle/nightly` which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
 * `endo` (on by default): Enables optimizations that leverage curve endomorphisms. Deprecated, will be removed in a future release.
 * `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
