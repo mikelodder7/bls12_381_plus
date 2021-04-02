@@ -364,13 +364,6 @@ impl Fp2 {
     }
 
     #[cfg(feature = "hashing")]
-    #[inline]
-    pub fn negate_if(&mut self, sgn: Sgn0Result) {
-        self.c0.negate_if(sgn);
-        self.c1.negate_if(sgn);
-    }
-
-    #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
     fn from_random_bytes(okm: [u8; 128]) -> Self {
         Self {

@@ -9,7 +9,7 @@ use group::{
     Curve, Group, GroupEncoding, UncompressedEncoding,
 };
 use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
 use group::WnafGroup;
@@ -1042,14 +1042,7 @@ impl G2Projective {
         // Taken from section 8.8.2 in
         // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html>
         const A: Fp2 = Fp2 {
-            c0: Fp([
-                0x0000000000000000u64,
-                0x0000000000000000u64,
-                0x0000000000000000u64,
-                0x0000000000000000u64,
-                0x0000000000000000u64,
-                0x0000000000000000u64,
-            ]),
+            c0: Fp::zero(),
             c1: Fp([
                 0xe53a000003135242u64,
                 0x01080c0fdef80285u64,
@@ -1084,7 +1077,7 @@ impl G2Projective {
                 0xfd0749345d33ad2u64,
                 0xd951e663066576f4u64,
                 0xde291a3d41e980d3u64,
-                0x815664c7dfe040du64,
+                0x0815664c7dfe040du64,
             ]),
             c1: Fp([
                 0x43f5fffffffcaaaeu64,
@@ -1092,7 +1085,7 @@ impl G2Projective {
                 0x7e83a49a2e99d69u64,
                 0xeca8f3318332bb7au64,
                 0xef148d1ea0f4c069u64,
-                0x40ab3263eff0206u64,
+                0x040ab3263eff0206u64,
             ]),
         };
         const XD1: Fp2 = Fp2::mul(&Z, &A);
@@ -1233,7 +1226,7 @@ impl G2Projective {
         tv2 = tv3 * x1n;
         let xn = Fp2::conditional_select(&tv2, &x1n, e8);
         let e9 = u.sgn0() ^ y.sgn0();
-        y.negate_if(e9);
+        y.conditional_negate(Choice::from(e9.as_u8()));
 
         Self {
             x: xn * xd.invert().unwrap(),

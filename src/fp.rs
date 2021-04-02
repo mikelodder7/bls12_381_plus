@@ -634,12 +634,6 @@ impl Fp {
     }
 
     #[cfg(feature = "hashing")]
-    #[inline]
-    pub(crate) fn negate_if(&mut self, sgn: Sgn0Result) {
-        self.conditional_assign(&self.neg(), Choice::from(sgn.as_u8()));
-    }
-
-    #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
     pub(crate) fn from_random_bytes(okm: [u8; 64]) -> Self {
         Self::from_u768([

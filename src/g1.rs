@@ -9,7 +9,7 @@ use group::{
     Curve, Group, GroupEncoding, UncompressedEncoding,
 };
 use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
 use group::WnafGroup;
@@ -971,7 +971,7 @@ impl G1Projective {
         y2.conditional_assign(&y1, e2);
 
         let e3 = u.sgn0() ^ y2.sgn0();
-        y2.negate_if(e3);
+        y2.conditional_negate(Choice::from(e3.as_u8()));
 
         Self {
             x: x2n * xd.invert().unwrap(),
@@ -1801,6 +1801,38 @@ fn test_batch_normalize() {
             }
         }
     }
+}
+
+#[test]
+fn test_sum_of_products() {
+    use ff::Field;
+    use rand_core::SeedableRng;
+    use rand_xorshift::XorShiftRng;
+
+    let seed = [1u8; 16];
+    let mut rng = XorShiftRng::from_seed(seed);
+
+    let h0 = G1Projective::random(&mut rng);
+
+    let s = Scalar::random(&mut rng);
+    let s_tilde = Scalar::random(&mut rng);
+    let c = Scalar::random(&mut rng);
+
+    assert_eq!(h0 * s, G1Projective::sum_of_products(&[h0], &[s]));
+    assert_eq!(
+        h0 * s_tilde,
+        G1Projective::sum_of_products(&[h0], &[s_tilde])
+    );
+
+    // test schnorr proof
+    let u = h0 * s;
+    let u_tilde = h0 * s_tilde;
+    let s_hat = s_tilde - c * s;
+    assert_eq!(u_tilde, u * c + h0 * s_hat);
+    assert_eq!(
+        u_tilde,
+        G1Projective::sum_of_products(&[u, h0], &[c, s_hat])
+    );
 }
 
 #[cfg(feature = "hashing")]
