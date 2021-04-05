@@ -1851,10 +1851,15 @@ fn test_sum_of_products_alloc() {
     let h0 = G1Projective::random(&mut rng);
 
     let s = Scalar::random(&mut rng);
+    let s_clone = s.clone();
     let s_tilde = Scalar::random(&mut rng);
     let c = Scalar::random(&mut rng);
 
-    assert_eq!(h0 * s, G1Projective::sum_of_products(&[h0], &mut [s]));
+    assert_eq!(
+        h0 * s,
+        G1Projective::sum_of_products_in_place(&[h0], &mut [s])
+    );
+    assert_eq!(s, s_clone);
     assert_eq!(
         h0 * s_tilde,
         G1Projective::sum_of_products(&[h0], &mut [s_tilde])
