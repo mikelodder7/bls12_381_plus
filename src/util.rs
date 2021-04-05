@@ -212,7 +212,7 @@ macro_rules! impl_pippenger_sum_of_products {
 
             let res = Self::sum_of_products_pippenger(points, scalars);
             for i in 0..scalars.len() {
-                scalars[i] *= Scalar::one();
+                scalars[i] = Scalar::from_raw(scalars[i].0);
             }
             res
         }
