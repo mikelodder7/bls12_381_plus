@@ -983,6 +983,7 @@ impl G1Projective {
     impl_pippenger_sum_of_products!();
 }
 
+/// The compressed form for a point in G1
 pub struct G1Compressed([u8; 48]);
 
 impl fmt::Debug for G1Compressed {
@@ -1009,6 +1010,7 @@ impl AsMut<[u8]> for G1Compressed {
     }
 }
 
+/// The uncompressed form for a point in G1
 pub struct G1Uncompressed([u8; 96]);
 
 impl fmt::Debug for G1Uncompressed {

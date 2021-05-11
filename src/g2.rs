@@ -1178,6 +1178,7 @@ impl G2Projective {
     impl_pippenger_sum_of_products!();
 }
 
+/// The compressed form of a G2 point
 pub struct G2Compressed([u8; 96]);
 
 impl fmt::Debug for G2Compressed {
@@ -1204,6 +1205,7 @@ impl AsMut<[u8]> for G2Compressed {
     }
 }
 
+/// The uncompressed form of a G2 point
 pub struct G2Uncompressed([u8; 192]);
 
 impl fmt::Debug for G2Uncompressed {

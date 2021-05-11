@@ -13,11 +13,11 @@ use crate::hash_to_field::ExpandMsg;
 use crate::signum::Sgn0Result;
 use crate::util::{adc, mac, sbb};
 
-// The internal representation of this type is six 64-bit unsigned
-// integers in little-endian order. `Fp` values are always in
-// Montgomery form; i.e., Scalar(a) = aR mod p, with R = 2^384.
+/// The internal representation of this type is six 64-bit unsigned
+/// integers in little-endian order. `Fp` values are always in
+/// Montgomery form; i.e., Scalar(a) = aR mod p, with R = 2^384.
 #[derive(Copy, Clone)]
-pub struct Fp(pub(crate) [u64; 6]);
+pub struct Fp(pub [u64; 6]);
 
 impl fmt::Debug for Fp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -172,6 +172,7 @@ impl Fp {
         R
     }
 
+    /// Returns true if field is the additive identity
     pub fn is_zero(&self) -> Choice {
         self.ct_eq(&Fp::zero())
     }
@@ -228,7 +229,8 @@ impl Fp {
         res
     }
 
-    pub(crate) fn random(mut rng: impl RngCore) -> Fp {
+    /// Create a random field element
+    pub fn random(mut rng: impl RngCore) -> Fp {
         let mut bytes = [0u8; 96];
         rng.fill_bytes(&mut bytes);
 
@@ -322,6 +324,7 @@ impl Fp {
         res
     }
 
+    /// Compute the modular square root of this field element
     #[inline]
     pub fn sqrt(&self) -> CtOption<Self> {
         // We use Shank's method, as p = 3 (mod 4). This means
@@ -380,6 +383,7 @@ impl Fp {
         Fp([r0, r1, r2, r3, r4, r5])
     }
 
+    /// Add `self` to `rhs` and return the result
     #[inline]
     pub const fn add(&self, rhs: &Fp) -> Fp {
         let (d0, carry) = adc(self.0[0], rhs.0[0], 0);
@@ -394,6 +398,7 @@ impl Fp {
         (&Fp([d0, d1, d2, d3, d4, d5])).subtract_p()
     }
 
+    /// Negate this element
     #[inline]
     pub const fn neg(&self) -> Fp {
         let (d0, borrow) = sbb(MODULUS[0], self.0[0], 0);
@@ -419,6 +424,7 @@ impl Fp {
         ])
     }
 
+    /// Subtract `rhs` from `self` and return the result
     #[inline]
     pub const fn sub(&self, rhs: &Fp) -> Fp {
         (&rhs.neg()).add(self)
@@ -502,11 +508,13 @@ impl Fp {
         (&Fp([r6, r7, r8, r9, r10, r11])).subtract_p()
     }
 
+    /// Return 2*self
     #[inline(always)]
     pub const fn double(&self) -> Fp {
         Fp::add(&self, &self)
     }
 
+    /// Compute `self` * `rhs`
     #[inline]
     pub const fn mul(&self, rhs: &Fp) -> Fp {
         let (t0, carry) = mac(0, self.0[0], rhs.0[0], 0);

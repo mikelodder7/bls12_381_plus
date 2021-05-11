@@ -13,9 +13,12 @@ use crate::signum::Sgn0Result;
 #[cfg(feature = "hashing")]
 use core::convert::TryFrom;
 
+/// A point in the multiplicative group of order p^2
 #[derive(Copy, Clone)]
 pub struct Fp2 {
+    /// The `a` portion
     pub c0: Fp,
+    /// The `b` portion
     pub c1: Fp,
 }
 
@@ -112,6 +115,7 @@ impl_binops_additive!(Fp2, Fp2);
 impl_binops_multiplicative!(Fp2, Fp2);
 
 impl Fp2 {
+    /// Return the additive identity element
     #[inline]
     pub const fn zero() -> Fp2 {
         Fp2 {
@@ -120,6 +124,7 @@ impl Fp2 {
         }
     }
 
+    /// Return the multiplicative identity element
     #[inline]
     pub const fn one() -> Fp2 {
         Fp2 {
@@ -128,11 +133,13 @@ impl Fp2 {
         }
     }
 
+    /// True if this element is the additive identity
     pub fn is_zero(&self) -> Choice {
         self.c0.is_zero() & self.c1.is_zero()
     }
 
-    pub(crate) fn random(mut rng: impl RngCore) -> Fp2 {
+    /// Return a random element
+    pub fn random(mut rng: impl RngCore) -> Fp2 {
         Fp2 {
             c0: Fp::random(&mut rng),
             c1: Fp::random(&mut rng),
@@ -147,6 +154,7 @@ impl Fp2 {
         self.conjugate()
     }
 
+    /// Conjugation of this element
     #[inline(always)]
     pub fn conjugate(&self) -> Self {
         Fp2 {
@@ -155,13 +163,12 @@ impl Fp2 {
         }
     }
 
+    /// Multiply a + bu by u + 1, getting
+    /// au + a + bu^2 + bu
+    /// and because u^2 = -1, we get
+    /// (a - b) + (a + b)u
     #[inline(always)]
     pub fn mul_by_nonresidue(&self) -> Fp2 {
-        // Multiply a + bu by u + 1, getting
-        // au + a + bu^2 + bu
-        // and because u^2 = -1, we get
-        // (a - b) + (a + b)u
-
         Fp2 {
             c0: self.c0 - self.c1,
             c1: self.c0 + self.c1,
@@ -182,6 +189,7 @@ impl Fp2 {
             | (self.c1.is_zero() & self.c0.lexicographically_largest())
     }
 
+    /// Compute the square of this element
     pub const fn square(&self) -> Fp2 {
         // Complex squaring:
         //
@@ -205,6 +213,7 @@ impl Fp2 {
         }
     }
 
+    /// Karatsuba multiplication self * rhs
     pub const fn mul(&self, rhs: &Fp2) -> Fp2 {
         // Karatsuba multiplication:
         //
@@ -232,6 +241,7 @@ impl Fp2 {
         Fp2 { c0, c1 }
     }
 
+    /// Add self + rhs
     pub const fn add(&self, rhs: &Fp2) -> Fp2 {
         Fp2 {
             c0: (&self.c0).add(&rhs.c0),
@@ -239,6 +249,7 @@ impl Fp2 {
         }
     }
 
+    /// Subtract self - rhs
     pub const fn sub(&self, rhs: &Fp2) -> Fp2 {
         Fp2 {
             c0: (&self.c0).sub(&rhs.c0),
@@ -246,6 +257,7 @@ impl Fp2 {
         }
     }
 
+    /// Negate this element
     pub const fn neg(&self) -> Fp2 {
         Fp2 {
             c0: (&self.c0).neg(),
@@ -253,6 +265,7 @@ impl Fp2 {
         }
     }
 
+    /// Double this element
     pub const fn double(&self) -> Fp2 {
         Fp2 {
             c0: self.c0.double(),
@@ -260,6 +273,7 @@ impl Fp2 {
         }
     }
 
+    /// Square root of this element
     pub fn sqrt(&self) -> CtOption<Self> {
         // Algorithm 9, https://eprint.iacr.org/2012/685.pdf
         // with constant time modifications.
@@ -355,7 +369,7 @@ impl Fp2 {
 
     #[cfg(feature = "hashing")]
     #[inline]
-    pub fn sgn0(&self) -> Sgn0Result {
+    pub(crate) fn sgn0(&self) -> Sgn0Result {
         if self.c0.is_zero().unwrap_u8() == 1 {
             self.c1.sgn0()
         } else {
@@ -365,7 +379,7 @@ impl Fp2 {
 
     #[cfg(feature = "hashing")]
     /// Take 64 bytes and compute the result reduced by the field modulus
-    fn from_random_bytes(okm: [u8; 128]) -> Self {
+    pub fn from_random_bytes(okm: [u8; 128]) -> Self {
         Self {
             c0: Fp::from_random_bytes(<[u8; 64]>::try_from(&okm[..64]).unwrap()),
             c1: Fp::from_random_bytes(<[u8; 64]>::try_from(&okm[64..]).unwrap()),
