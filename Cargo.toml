@@ -84,6 +84,7 @@ version = "0.6"
 [features]
 default = ["groups", "pairings", "alloc", "bits", "hashing"]
 bits = ["ff/bits"]
+expose-fields = ["groups"]
 groups = ["group"]
 hashing = ["digest"]
 pairings = ["groups", "pairing"]

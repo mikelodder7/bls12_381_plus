@@ -48,10 +48,14 @@ mod scalar;
 
 pub use scalar::Scalar;
 
-#[cfg(feature = "groups")]
+#[cfg(all(feature = "groups", not(feature = "expose-fields")))]
 mod fp;
-#[cfg(feature = "groups")]
+#[cfg(feature = "expose-fields")]
+pub mod fp;
+#[cfg(all(feature = "groups", not(feature = "expose-fields")))]
 mod fp2;
+#[cfg(feature = "expose-fields")]
+pub mod fp2;
 #[cfg(feature = "groups")]
 mod g1;
 #[cfg(feature = "groups")]
@@ -59,12 +63,14 @@ mod g2;
 
 #[cfg(feature = "groups")]
 pub use g1::{G1Affine, G1Projective};
+#[cfg(feature = "expose-fields")]
+pub use g1::{G1Compressed, G1Uncompressed};
 #[cfg(feature = "groups")]
 pub use g2::{G2Affine, G2Projective};
+#[cfg(feature = "expose-fields")]
+pub use g2::{G2Compressed, G2Uncompressed};
 
-#[cfg(feature = "groups")]
 mod fp12;
-#[cfg(feature = "groups")]
 mod fp6;
 
 // The BLS parameter x for BLS12-381 is -0xd201000000010000

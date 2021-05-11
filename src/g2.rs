@@ -1161,6 +1161,7 @@ impl G2Projective {
     impl_pippenger_sum_of_products!();
 }
 
+/// The compressed form of a G2 point
 #[derive(Clone, Copy)]
 pub struct G2Compressed([u8; 96]);
 
