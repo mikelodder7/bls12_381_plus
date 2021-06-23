@@ -362,7 +362,14 @@ macro_rules! impl_serde {
                     }
                 }
 
-                deserializer.deserialize_tuple($len, ByteArrayVisitor)
+                if $len <= 32 && $len > 0 {
+                    // for arrays of size from 1 to 32 serde implements serialization using tuple
+                    deserializer.deserialize_tuple($len, ByteArrayVisitor)
+                }
+                else {
+                    // for other sizes serialization is implemented using sequence
+                    deserializer.deserialize_seq(ByteArrayVisitor)
+                }
             }
         }
     };
