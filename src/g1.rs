@@ -1900,3 +1900,13 @@ fn test_hash() {
         assert_eq!(a.to_affine(), e);
     }
 }
+
+#[test]
+fn test_g1_bare_serialize() {
+    let p1= G1Affine::generator();
+
+    let vec = serde_bare::to_vec(&p1).unwrap();
+    let p2: G1Affine = serde_bare::from_slice(&vec).unwrap();
+
+    assert_eq!(p1, p2);
+}
