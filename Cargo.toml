@@ -66,17 +66,10 @@ default-features = false
 version = "1.4"
 default-features = false
 
-[dependencies.digest]
-version = "0.9"
-optional = true
-
 [dependencies.serde]
 version = "1.0"
 default-features = false
 features = ["derive"]
-
-[dependencies.zeroize]
-version = "1.2"
 
 [dependencies.heapless]
 version = "0.6"
