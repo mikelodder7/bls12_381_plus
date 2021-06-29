@@ -1320,3 +1320,13 @@ fn gen_cs() {
     c2 = c2.neg();
     println!("c2 = {:?}", c2.sqrt().unwrap())
 }
+
+#[test]
+fn test_scalar_bare_serialize() {
+    let p1 = Scalar::one();
+
+    let vec = serde_bare::to_vec(&p1).unwrap();
+    let p2: Scalar = serde_bare::from_slice(&vec).unwrap();
+
+    assert_eq!(p1, p2);
+}
