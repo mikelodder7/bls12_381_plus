@@ -1314,3 +1314,13 @@ fn test_zeroize() {
     a.zeroize();
     assert!(bool::from(a.is_zero()));
 }
+
+#[test]
+fn test_serialization() {
+    let s1 = Scalar::multiplicative_generator();
+
+    let vec = serde_bare::to_vec(&s1).unwrap();
+    let s2: Scalar = serde_bare::from_slice(&vec).unwrap();
+
+    assert_eq!(s1, s2);
+}

@@ -9,7 +9,7 @@ use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use group::Group;
-use heapless::{consts::*, Vec};
+use heapless::Vec;
 use pairing::{Engine, PairingCurveAffine};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
@@ -491,7 +491,7 @@ impl Group for Gt {
 /// Requires the `pairing` crate features to be enabled.
 pub struct G2Prepared {
     infinity: Choice,
-    coeffs: Vec<(Fp2, Fp2, Fp2), U68>,
+    coeffs: Vec<(Fp2, Fp2, Fp2), 68>,
 }
 
 impl From<G2Affine> for G2Prepared {
@@ -499,7 +499,7 @@ impl From<G2Affine> for G2Prepared {
         struct Adder {
             cur: G2Projective,
             base: G2Affine,
-            coeffs: Vec<(Fp2, Fp2, Fp2), U68>,
+            coeffs: Vec<(Fp2, Fp2, Fp2), 68>,
         }
 
         impl MillerLoopDriver for Adder {

@@ -24,6 +24,7 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 criterion = "0.3"
 hex = "0.4"
 rand_xorshift = "0.3"
+serde_bare = "0.4"
 sha2 = "0.9"
 sha3 = "0.9"
 
@@ -72,7 +73,7 @@ default-features = false
 features = ["derive"]
 
 [dependencies.heapless]
-version = "0.6"
+version = "0.7"
 
 [features]
 default = ["groups", "pairings", "alloc", "bits", "hashing"]

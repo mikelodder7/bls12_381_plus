@@ -322,7 +322,16 @@ macro_rules! impl_serde {
             where
                 S: serde::Serializer,
             {
-                $serfunc(self).serialize(s)
+                use serde::ser::SerializeTuple;
+
+                let bytes = $serfunc(self);
+
+                let mut seq = s.serialize_tuple(bytes.len())?;
+                for b in &bytes[..] {
+                    seq.serialize_element(b)?;
+                }
+
+                seq.end()
             }
         }
 

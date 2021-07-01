@@ -2423,3 +2423,13 @@ fn test_sum_of_products_alloc() {
         G2Projective::sum_of_products(&[u, h0], &mut [c, s_hat])
     );
 }
+
+#[test]
+fn test_serialization() {
+    let p1 = G2Affine::generator();
+
+    let vec = serde_bare::to_vec(&p1).unwrap();
+    let p2: G2Affine = serde_bare::from_slice(&vec).unwrap();
+
+    assert_eq!(p1, p2);
+}
