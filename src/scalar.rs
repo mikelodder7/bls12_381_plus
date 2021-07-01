@@ -1320,3 +1320,13 @@ fn gen_cs() {
     c2 = c2.neg();
     println!("c2 = {:?}", c2.sqrt().unwrap())
 }
+
+#[test]
+fn test_serialization() {
+    let s1 = Scalar::multiplicative_generator();
+
+    let vec = serde_bare::to_vec(&s1).unwrap();
+    let s2: Scalar = serde_bare::from_slice(&vec).unwrap();
+
+    assert_eq!(s1, s2);
+}
