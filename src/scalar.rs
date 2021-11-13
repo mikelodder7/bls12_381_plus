@@ -719,6 +719,10 @@ impl Field for Scalar {
         Self::one()
     }
 
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+
     #[must_use]
     fn square(&self) -> Self {
         self.square()
@@ -741,16 +745,21 @@ impl Field for Scalar {
 impl PrimeField for Scalar {
     type Repr = [u8; 32];
 
-    fn from_repr(r: Self::Repr) -> CtOption<Self> {
-        Self::from_bytes(&r)
+    fn from_repr(r: Self::Repr) -> Option<Self> {
+        let t = Self::from_bytes(&r);
+        if t.is_some().unwrap_u8() == 1 {
+            Some(t.unwrap())
+        } else {
+            None
+        }
     }
 
     fn to_repr(&self) -> Self::Repr {
         self.to_bytes()
     }
 
-    fn is_odd(&self) -> Choice {
-        Choice::from(self.to_bytes()[0] & 1)
+    fn is_odd(&self) -> bool {
+        self.to_bytes()[0] & 1 == 1
     }
 
     const NUM_BITS: u32 = MODULUS_BITS;
@@ -1283,7 +1292,6 @@ fn test_double() {
 
     assert_eq!(a.double(), a + a);
 }
-
 
 #[test]
 fn test_from_okm() {

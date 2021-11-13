@@ -514,7 +514,7 @@ impl Fp {
     /// Return 2*self
     #[inline(always)]
     pub const fn double(&self) -> Fp {
-        Fp::add(&self, &self)
+        Fp::add(self, self)
     }
 
     /// Compute `self` * `rhs`
