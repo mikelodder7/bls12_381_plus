@@ -1314,7 +1314,7 @@ impl Reduce<U256> for Scalar {
 
     fn reduce(n: U256) -> Self {
         let mut out = [0u8; 48];
-        out[..32].copy_from_slice(&n.to_be_bytes());
+        out[16..].copy_from_slice(&n.to_be_bytes());
         Self::from_okm(&out)
     }
 
