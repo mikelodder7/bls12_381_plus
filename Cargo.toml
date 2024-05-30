@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.15"
+version = "0.8.16"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -65,11 +65,11 @@ version = "0.6"
 default-features = false
 
 [dependencies.subtle]
-version = "2.4"
+version = "2.5"
 default-features = false
 
 [dependencies.zeroize]
-version = "1.6"
+version = "1.8"
 default-features = false
 
 [dependencies.serde]
@@ -88,6 +88,34 @@ version = "0.3"
 version = "0.10"
 default-features = false
 
+[dependencies.ark-bls12-381]
+version = "0.4"
+optional = true
+
+[dependencies.ark-ec]
+version = "0.4"
+optional = true
+
+[dependencies.ark-ff]
+version = "0.4"
+optional = true
+
+[dependencies.ark-serialize]
+version = "0.4"
+optional = true
+
+[dependencies.rand]
+version = "0.8"
+optional = true
+
+[dependencies.num-bigint]
+version = "0.4"
+optional = true
+
+[dependencies.num-traits]
+version = "0.2"
+optional = true
+
 [features]
 default = ["groups", "pairings", "alloc", "bits"]
 bits = ["ff/bits"]
@@ -95,4 +123,5 @@ expose-fields = ["groups"]
 groups = ["group"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
+ark = ["ark-bls12-381", "ark-ec", "ark-ff", "ark-serialize", "num-bigint", "num-traits", "rand", "std"]
 std = []

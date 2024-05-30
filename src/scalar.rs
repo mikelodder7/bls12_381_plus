@@ -1,9 +1,12 @@
 //! This module provides an implementation of the BLS12-381 scalar field $\mathbb{F}_q$
 //! where `q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`
 
+#[cfg(feature = "ark")]
+mod ark;
+
 use core::convert::TryFrom;
 use core::fmt::{self, Formatter};
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 
 use ff::{Field, PrimeField};
@@ -31,7 +34,7 @@ use crate::util::{adc, decode_hex_into_slice, mac, sbb};
 // The internal representation of this type is four 64-bit unsigned
 // integers in little-endian order. `Scalar` values are always in
 // Montgomery form; i.e., Scalar(a) = aR mod q, with R = 2^256.
-#[derive(Clone, Copy, Eq)]
+#[derive(Clone, Copy, Eq, PartialOrd, Hash)]
 pub struct Scalar(pub(crate) [u64; 4]);
 
 impl fmt::Debug for Scalar {
@@ -46,6 +49,28 @@ impl fmt::Display for Scalar {
     }
 }
 
+impl From<bool> for Scalar {
+    fn from(bit: bool) -> Self {
+        if bit {
+            Self::ONE
+        } else {
+            Self::ZERO
+        }
+    }
+}
+
+impl From<u8> for Scalar {
+    fn from(value: u8) -> Self {
+        Self::from(u64::from(value))
+    }
+}
+
+impl From<u16> for Scalar {
+    fn from(value: u16) -> Self {
+        Self::from(u64::from(value))
+    }
+}
+
 impl From<u32> for Scalar {
     fn from(val: u32) -> Self {
         Scalar([val as u64, 0, 0, 0]) * R2
@@ -55,6 +80,13 @@ impl From<u32> for Scalar {
 impl From<u64> for Scalar {
     fn from(val: u64) -> Scalar {
         Scalar([val, 0, 0, 0]) * R2
+    }
+}
+
+#[cfg(any(target_arch = "64", feature = "ark"))]
+impl From<u128> for Scalar {
+    fn from(val: u128) -> Scalar {
+        Self::from_u128(val)
     }
 }
 
@@ -71,6 +103,17 @@ impl PartialEq for Scalar {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         bool::from(self.ct_eq(other))
+    }
+}
+
+impl Ord for Scalar {
+    #[inline]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        match (bool::from(self.is_high()), bool::from(other.is_high())) {
+            (false, false) | (true, true) => self.to_le_bytes().cmp(&other.to_le_bytes()),
+            (false, true) => core::cmp::Ordering::Greater,
+            (true, false) => core::cmp::Ordering::Less,
+        }
     }
 }
 
@@ -175,6 +218,56 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
 
 impl_binops_additive!(Scalar, Scalar);
 impl_binops_multiplicative!(Scalar, Scalar);
+
+impl<'a, 'b> Div<&'b Scalar> for &'a Scalar {
+    type Output = Scalar;
+
+    #[inline]
+    fn div(self, rhs: &'b Scalar) -> Scalar {
+        self * rhs.invert().expect("a non-zero scalar")
+    }
+}
+
+impl Div<&Scalar> for Scalar {
+    type Output = Scalar;
+
+    #[inline]
+    fn div(self, rhs: &Scalar) -> Scalar {
+        &self / rhs
+    }
+}
+
+impl Div<Scalar> for &Scalar {
+    type Output = Scalar;
+
+    #[inline]
+    fn div(self, rhs: Scalar) -> Scalar {
+        self / &rhs
+    }
+}
+
+impl Div for Scalar {
+    type Output = Scalar;
+
+    #[inline]
+    fn div(self, rhs: Scalar) -> Scalar {
+        &self / &rhs
+    }
+}
+
+impl DivAssign<&Scalar> for Scalar {
+    #[inline]
+    fn div_assign(&mut self, rhs: &Scalar) {
+        *self = &*self / rhs;
+    }
+}
+
+impl DivAssign for Scalar {
+    #[inline]
+    fn div_assign(&mut self, rhs: Scalar) {
+        *self = &*self / &rhs;
+    }
+}
 
 /// INV = -(q^{-1} mod 2^64) mod 2^64
 const INV: u64 = 0xffff_fffe_ffff_ffff;
