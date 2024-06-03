@@ -1,5 +1,8 @@
 //! This module provides an implementation of the $\mathbb{G}_1$ group of BLS12-381.
 
+#[cfg(feature = "ark")]
+mod ark;
+
 use core::borrow::Borrow;
 use core::fmt::{self, Formatter};
 use core::iter::Sum;
@@ -522,7 +525,7 @@ impl_serde!(
 
 /// This is an element of $\mathbb{G}_1$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash)]
 pub struct G1Projective {
     pub(crate) x: Fp,
     pub(crate) y: Fp,

@@ -25,7 +25,7 @@ use crate::util::{adc, mac, sbb};
 /// The internal representation of this type is six 64-bit unsigned
 /// integers in little-endian order. `Fp` values are always in
 /// Montgomery form; i.e., Scalar(a) = aR mod p, with R = 2^384.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash)]
 pub struct Fp(pub [u64; 6]);
 
 impl fmt::Debug for Fp {
