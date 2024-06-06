@@ -1,5 +1,5 @@
 use crate::{G1Projective, Scalar};
-use ark_ec::{Group as ArkGroup, AffineRepr};
+use ark_ec::{AffineRepr, Group as ArkGroup};
 use ark_ff::UniformRand;
 use ark_serialize::{
     CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid, Validate,

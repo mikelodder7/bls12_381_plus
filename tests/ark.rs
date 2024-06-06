@@ -2,7 +2,6 @@
 mod ark_tests {
     use ark_poly::{
         univariate::DensePolynomial, DenseUVPolynomial, EvaluationDomain, GeneralEvaluationDomain,
-        Polynomial,
     };
     use bls12_381_plus::{G1Projective, Scalar};
     use ff::Field;
@@ -18,8 +17,8 @@ mod ark_tests {
         let t_poly = DensePolynomial::<Scalar>::from_coefficients_slice(&t_poly_coeffs);
         let poly = DensePolynomial::<Scalar>::rand(5, &mut rand::thread_rng());
 
-        let domain = GeneralEvaluationDomain::<Scalar>::new(32).unwrap();
-        let aux_domain = GeneralEvaluationDomain::<Scalar>::new(64).unwrap();
+        let domain = GeneralEvaluationDomain::<Scalar>::new(8).unwrap();
+        let aux_domain = GeneralEvaluationDomain::<Scalar>::new(16).unwrap();
 
         let t_evals = aux_domain.fft(t_poly.coeffs());
         let d_evals = aux_domain.fft(poly.coeffs());
