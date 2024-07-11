@@ -12,7 +12,7 @@ use core::str::FromStr;
 use ff::{Field, PrimeField};
 use num_bigint::BigUint;
 use num_traits::Num;
-use std::iter;
+use core::iter;
 use subtle::ConstantTimeEq;
 
 use crate::Scalar;
@@ -196,6 +196,14 @@ impl FftField for Scalar {
         0xd09b681922c813b4u64,
         0x16a2a19edfe81f20u64,
     ]);
+    const SMALL_SUBGROUP_BASE: Option<u32> = Some(3);
+    const SMALL_SUBGROUP_BASE_ADICITY: Option<u32> = Some(1);
+    const LARGE_SUBGROUP_ROOT_OF_UNITY: Option<Self> = Some(Self::from_raw_unchecked([
+        0x02b93785357e7917,
+        0x85aedb297ca15150,
+        0xea45ce5f9f533109,
+        0x3c1d00c4965f33c8,
+    ]));
 }
 
 impl FromStr for Scalar {
@@ -212,13 +220,13 @@ impl FromStr for Scalar {
     }
 }
 
-impl From<<Scalar as ArkPrimeField>::BigInt> for Scalar {
-    fn from(repr: <Scalar as ArkPrimeField>::BigInt) -> Self {
+impl From<BigInteger256> for Scalar {
+    fn from(repr: BigInteger256) -> Self {
         Self::from_bigint(repr).expect("Failed to convert from BigInt")
     }
 }
 
-impl From<Scalar> for <Scalar as ArkPrimeField>::BigInt {
+impl From<Scalar> for BigInteger256 {
     fn from(scalar: Scalar) -> Self {
         scalar.into_bigint()
     }
