@@ -118,7 +118,7 @@ version = "0.2"
 optional = true
 
 [features]
-default = ["groups", "pairings", "alloc", "bits", "ark"]
+default = ["groups", "pairings", "alloc", "bits"]
 bits = ["ff/bits"]
 expose-fields = ["groups"]
 groups = ["group"]
