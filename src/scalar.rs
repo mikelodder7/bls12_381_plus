@@ -83,7 +83,7 @@ impl From<u64> for Scalar {
     }
 }
 
-#[cfg(any(target_arch = "64", feature = "ark"))]
+#[cfg(feature = "ark")]
 impl From<u128> for Scalar {
     fn from(val: u128) -> Scalar {
         Self::from_u128(val)

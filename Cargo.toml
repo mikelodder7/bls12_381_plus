@@ -20,9 +20,6 @@ edition = "2021"
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dev-dependencies]
 ark-poly = "0.4.2"
 hex = "0.4"
