@@ -176,7 +176,7 @@ impl MillerLoopResult {
     }
 }
 
-impl<'a, 'b> Add<&'b MillerLoopResult> for &'a MillerLoopResult {
+impl<'b> Add<&'b MillerLoopResult> for &MillerLoopResult {
     type Output = MillerLoopResult;
 
     #[inline]
@@ -398,11 +398,11 @@ impl Gt {
 
     /// Compute the inverse of this element.
     pub fn invert(&self) -> CtOption<Self> {
-        self.0.invert().map(|r| Self(r))
+        self.0.invert().map(Self)
     }
 }
 
-impl<'a> Neg for &'a Gt {
+impl Neg for &Gt {
     type Output = Gt;
 
     #[inline]
@@ -421,7 +421,7 @@ impl Neg for Gt {
     }
 }
 
-impl<'a, 'b> Add<&'b Gt> for &'a Gt {
+impl<'b> Add<&'b Gt> for &Gt {
     type Output = Gt;
 
     #[inline]
@@ -430,7 +430,7 @@ impl<'a, 'b> Add<&'b Gt> for &'a Gt {
     }
 }
 
-impl<'a, 'b> Sub<&'b Gt> for &'a Gt {
+impl<'b> Sub<&'b Gt> for &Gt {
     type Output = Gt;
 
     #[inline]
@@ -439,7 +439,7 @@ impl<'a, 'b> Sub<&'b Gt> for &'a Gt {
     }
 }
 
-impl<'a, 'b> Mul<&'b Scalar> for &'a Gt {
+impl<'b> Mul<&'b Scalar> for &Gt {
     type Output = Gt;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
@@ -655,7 +655,6 @@ impl Group for Gt {
         self.ct_eq(&Self::IDENTITY)
     }
 
-    #[must_use]
     fn double(&self) -> Self {
         self.double()
     }
@@ -1315,8 +1314,8 @@ fn test_product() {
     let t1 = Gt::random(rng_1);
     let t2 = Gt::random(rng_2);
 
-    let s1 = &t1 * t2;
-    let s2 = t2 * &t1;
+    let s1 = t1 * t2;
+    let s2 = t2 * t1;
 
     assert_eq!(s1, s2);
 

@@ -20,12 +20,12 @@ impl CanonicalSerialize for G1Projective {
             Compress::No => {
                 let _ = writer
                     .write(&self.to_uncompressed())
-                    .map_err(|e| SerializationError::IoError(e))?;
+                    .map_err(SerializationError::IoError)?;
             }
             Compress::Yes => {
                 let _ = writer
                     .write(&self.to_compressed())
-                    .map_err(|e| SerializationError::IoError(e))?;
+                    .map_err(SerializationError::IoError)?;
             }
         }
         Ok(())
@@ -52,14 +52,14 @@ impl CanonicalDeserialize for G1Projective {
                 let mut bytes = [0u8; G1Projective::UNCOMPRESSED_BYTES];
                 reader
                     .read(&mut bytes)
-                    .map_err(|e| SerializationError::IoError(e))?;
+                    .map_err(SerializationError::IoError)?;
                 G1Projective::from_uncompressed(&bytes)
             }
             Compress::Yes => {
                 let mut bytes = [0u8; G1Projective::COMPRESSED_BYTES];
                 reader
                     .read(&mut bytes)
-                    .map_err(|e| SerializationError::IoError(e))?;
+                    .map_err(SerializationError::IoError)?;
                 G1Projective::from_compressed(&bytes)
             }
         };

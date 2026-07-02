@@ -15,9 +15,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
 use elliptic_curve::{
-    bigint::{ArrayEncoding, Encoding, U256, U384, U512},
-    consts::{U32, U48, U64},
-    generic_array::GenericArray,
+    bigint::{Encoding, U256, U384, U512},
     ops::{Invert, Reduce},
     scalar::{FromUintUnchecked, IsHigh},
     ScalarPrimitive,
@@ -34,7 +32,7 @@ use crate::util::{adc, decode_hex_into_slice, mac, sbb};
 // The internal representation of this type is four 64-bit unsigned
 // integers in little-endian order. `Scalar` values are always in
 // Montgomery form; i.e., Scalar(a) = aR mod q, with R = 2^256.
-#[derive(Clone, Copy, Eq, PartialOrd, Hash)]
+#[derive(Clone, Copy, Eq)]
 pub struct Scalar(pub(crate) [u64; 4]);
 
 impl fmt::Debug for Scalar {
@@ -83,7 +81,7 @@ impl From<u64> for Scalar {
     }
 }
 
-#[cfg(any(target_arch = "64", feature = "ark"))]
+#[cfg(any(target_pointer_width = "64", feature = "ark"))]
 impl From<u128> for Scalar {
     fn from(val: u128) -> Scalar {
         Self::from_u128(val)
@@ -103,6 +101,19 @@ impl PartialEq for Scalar {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         bool::from(self.ct_eq(other))
+    }
+}
+
+impl core::hash::Hash for Scalar {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
+impl PartialOrd for Scalar {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -171,7 +182,7 @@ const GENERATOR: Scalar = Scalar([
     0x3513_3220_8fc5_a8c4,
 ]);
 
-impl<'a> Neg for &'a Scalar {
+impl Neg for &Scalar {
     type Output = Scalar;
 
     #[inline]
@@ -189,7 +200,7 @@ impl Neg for Scalar {
     }
 }
 
-impl<'a, 'b> Sub<&'b Scalar> for &'a Scalar {
+impl<'b> Sub<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     #[inline]
@@ -198,7 +209,7 @@ impl<'a, 'b> Sub<&'b Scalar> for &'a Scalar {
     }
 }
 
-impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
+impl<'b> Add<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     #[inline]
@@ -207,7 +218,7 @@ impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
     }
 }
 
-impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
+impl<'b> Mul<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     #[inline]
@@ -219,7 +230,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
 impl_binops_additive!(Scalar, Scalar);
 impl_binops_multiplicative!(Scalar, Scalar);
 
-impl<'a, 'b> Div<&'b Scalar> for &'a Scalar {
+impl<'b> Div<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     #[inline]
@@ -233,7 +244,7 @@ impl Div<&Scalar> for Scalar {
 
     #[inline]
     fn div(self, rhs: &Scalar) -> Scalar {
-        &self / rhs
+        self * rhs.invert().expect("a non-zero scalar")
     }
 }
 
@@ -242,7 +253,7 @@ impl Div<Scalar> for &Scalar {
 
     #[inline]
     fn div(self, rhs: Scalar) -> Scalar {
-        self / &rhs
+        self * rhs.invert().expect("a non-zero scalar")
     }
 }
 
@@ -251,21 +262,21 @@ impl Div for Scalar {
 
     #[inline]
     fn div(self, rhs: Scalar) -> Scalar {
-        &self / &rhs
+        self * rhs.invert().expect("a non-zero scalar")
     }
 }
 
 impl DivAssign<&Scalar> for Scalar {
     #[inline]
     fn div_assign(&mut self, rhs: &Scalar) {
-        *self = &*self / rhs;
+        *self = *self / rhs;
     }
 }
 
 impl DivAssign for Scalar {
     #[inline]
     fn div_assign(&mut self, rhs: Scalar) {
-        *self = &*self / &rhs;
+        *self = *self / rhs;
     }
 }
 
@@ -534,13 +545,13 @@ impl Scalar {
     /// Converts from an integer represented in little endian
     /// into its (congruent) `Scalar` representation.
     pub fn from_raw(val: [u64; 4]) -> CtOption<Self> {
-        CtOption::new((&Scalar(val)).mul(&R2), 1u8.into())
+        CtOption::new(Scalar(val).mul(&R2), 1u8.into())
     }
 
     /// Converts from an integer represented in little endian
     /// into its (congruent) `Scalar` representation.
     pub const fn from_raw_unchecked(val: [u64; 4]) -> Self {
-        (&Scalar(val)).mul(&R2)
+        Scalar::mul(&Scalar(val), &R2)
     }
 
     /// Converts this `Scalar` into an integer represented in little endian
@@ -759,7 +770,7 @@ impl Scalar {
         let (r7, _) = adc(r7, carry2, carry);
 
         // Result may be within MODULUS of the correct value
-        (&Scalar([r4, r5, r6, r7])).sub(&MODULUS)
+        Scalar::sub(&Scalar([r4, r5, r6, r7]), &MODULUS)
     }
 
     /// Multiplies `rhs` by `self`, returning the result.
@@ -818,7 +829,7 @@ impl Scalar {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Scalar([d0, d1, d2, d3])).sub(&MODULUS)
+        Scalar::sub(&Scalar([d0, d1, d2, d3]), &MODULUS)
     }
 
     /// Negates `self`.
@@ -876,12 +887,10 @@ impl Field for Scalar {
         Self::from_bytes_wide(&buf)
     }
 
-    #[must_use]
     fn square(&self) -> Self {
         self.square()
     }
 
-    #[must_use]
     fn double(&self) -> Self {
         self.double()
     }
@@ -1160,30 +1169,17 @@ impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
     }
 }
 
-impl From<GenericArray<u8, U48>> for Scalar {
-    fn from(value: GenericArray<u8, U48>) -> Self {
-        Self::from_uint_unchecked(U384::from_be_byte_array(value))
+impl From<[u8; 48]> for Scalar {
+    fn from(value: [u8; 48]) -> Self {
+        Self::from_uint_unchecked(U384::from_be_slice(&value))
     }
 }
 
-impl From<Scalar> for GenericArray<u8, U48> {
+impl From<Scalar> for [u8; 48] {
     fn from(value: Scalar) -> Self {
-        let mut arr = GenericArray::<u8, U48>::default();
+        let mut arr = [0u8; 48];
         arr[16..].copy_from_slice(&value.to_be_bytes());
         arr
-    }
-}
-
-impl From<GenericArray<u8, U32>> for Scalar {
-    fn from(value: GenericArray<u8, U32>) -> Self {
-        let arr: [u8; 32] = <[u8; 32]>::try_from(value.as_slice()).unwrap();
-        Self::from_be_bytes(&arr).unwrap()
-    }
-}
-
-impl From<Scalar> for GenericArray<u8, U32> {
-    fn from(value: Scalar) -> Self {
-        GenericArray::clone_from_slice(&value.to_be_bytes())
     }
 }
 
@@ -1403,7 +1399,7 @@ impl core::ops::ShrAssign<usize> for Scalar {
 }
 
 impl Reduce<U256> for Scalar {
-    type Bytes = GenericArray<u8, U32>;
+    type Bytes = [u8; 32];
 
     fn reduce(n: U256) -> Self {
         let mut out = [0u8; 48];
@@ -1412,25 +1408,25 @@ impl Reduce<U256> for Scalar {
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U256::from_be_byte_array(*bytes))
+        Self::reduce(U256::from_be_slice(bytes))
     }
 }
 
 impl Reduce<U384> for Scalar {
-    type Bytes = GenericArray<u8, U48>;
+    type Bytes = [u8; 48];
 
     fn reduce(n: U384) -> Self {
         Self::from_okm(&n.to_be_bytes())
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U384::from_be_byte_array(*bytes))
+        Self::reduce(U384::from_be_slice(bytes))
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Reduce<U512> for Scalar {
-    type Bytes = GenericArray<u8, U64>;
+    type Bytes = [u8; 64];
 
     fn reduce(n: U512) -> Self {
         #[cfg(target_pointer_width = "64")]
@@ -1452,7 +1448,7 @@ impl Reduce<U512> for Scalar {
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U512::from_be_byte_array(*bytes))
+        Self::reduce(U512::from_be_slice(bytes))
     }
 }
 
@@ -1473,7 +1469,7 @@ fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
 
 #[cfg(target_arch = "wasm32")]
 impl Reduce<U512> for Scalar {
-    type Bytes = GenericArray<u8, U64>;
+    type Bytes = [u8; 64];
 
     fn reduce(n: U512) -> Self {
         let words = n.as_words();
@@ -1488,7 +1484,7 @@ impl Reduce<U512> for Scalar {
     }
 
     fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U512::from_be_byte_array(*bytes))
+        Self::reduce(U512::from_be_slice(bytes))
     }
 }
 

@@ -7,10 +7,8 @@ use core::fmt;
 use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
 use elliptic_curve::{
-    generic_array::{
-        typenum::{U16, U64},
-        GenericArray,
-    },
+    bigint::{ByteArray, U512},
+    consts::U16,
     hash2curve::{
         ExpandMsg, Expander, FromOkm, Isogeny, IsogenyCoefficients, MapToCurve, OsswuMap,
         OsswuMapParams, Sgn0,
@@ -25,7 +23,7 @@ use crate::util::{adc, mac, sbb};
 /// The internal representation of this type is six 64-bit unsigned
 /// integers in little-endian order. `Fp` values are always in
 /// Montgomery form; i.e., Scalar(a) = aR mod p, with R = 2^384.
-#[derive(Copy, Clone, Hash)]
+#[derive(Copy, Clone)]
 pub struct Fp(pub [u64; 6]);
 
 impl fmt::Debug for Fp {
@@ -63,6 +61,12 @@ impl PartialEq for Fp {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         bool::from(self.ct_eq(other))
+    }
+}
+
+impl core::hash::Hash for Fp {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
@@ -122,7 +126,7 @@ const R3: Fp = Fp([
     0x0aa6_3460_9175_5d4d,
 ]);
 
-impl<'a> Neg for &'a Fp {
+impl Neg for &Fp {
     type Output = Fp;
 
     #[inline]
@@ -140,7 +144,7 @@ impl Neg for Fp {
     }
 }
 
-impl<'a, 'b> Sub<&'b Fp> for &'a Fp {
+impl<'b> Sub<&'b Fp> for &Fp {
     type Output = Fp;
 
     #[inline]
@@ -149,7 +153,7 @@ impl<'a, 'b> Sub<&'b Fp> for &'a Fp {
     }
 }
 
-impl<'a, 'b> Add<&'b Fp> for &'a Fp {
+impl<'b> Add<&'b Fp> for &Fp {
     type Output = Fp;
 
     #[inline]
@@ -158,7 +162,7 @@ impl<'a, 'b> Add<&'b Fp> for &'a Fp {
     }
 }
 
-impl<'a, 'b> Mul<&'b Fp> for &'a Fp {
+impl<'b> Mul<&'b Fp> for &Fp {
     type Output = Fp;
 
     #[inline]
@@ -171,9 +175,9 @@ impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
 impl FromOkm for Fp {
-    type Length = U64;
+    type Length = <U512 as elliptic_curve::bigint::ArrayEncoding>::ByteSize;
 
-    fn from_okm(data: &GenericArray<u8, Self::Length>) -> Self {
+    fn from_okm(data: &ByteArray<U512>) -> Self {
         let input = arrayref::array_ref![data, 0, 64];
         Self::from_random_bytes(*input)
     }
@@ -645,7 +649,7 @@ impl Fp {
     /// Subtract `rhs` from `self` and return the result
     #[inline]
     pub const fn sub(&self, rhs: &Fp) -> Fp {
-        (&rhs.neg()).add(self)
+        Fp::add(&Fp::neg(rhs), self)
     }
 
     /// Returns `c = a.zip(b).fold(0, |acc, (a_i, b_i)| acc + a_i * b_i)`.
@@ -972,7 +976,7 @@ fn test_conditional_selection() {
 fn test_equality() {
     fn is_equal(a: &Fp, b: &Fp) -> bool {
         let eq = a == b;
-        let ct_eq = a.ct_eq(&b);
+        let ct_eq = a.ct_eq(b);
 
         assert_eq!(eq, bool::from(ct_eq));
 

@@ -20,8 +20,6 @@ use group::WnafGroup;
 use crate::fp::Fp;
 use crate::util::decode_hex_into_slice;
 use crate::Scalar;
-use elliptic_curve::consts::U48;
-use elliptic_curve::generic_array::GenericArray;
 use elliptic_curve::hash2curve::{ExpandMsgXmd, Sgn0};
 use elliptic_curve::ops::{LinearCombination, MulByGenerator};
 use elliptic_curve::point::AffineCoordinates;
@@ -147,7 +145,7 @@ impl PartialEq for G1Affine {
     }
 }
 
-impl<'a> Neg for &'a G1Affine {
+impl Neg for &G1Affine {
     type Output = G1Affine;
 
     #[inline]
@@ -169,7 +167,7 @@ impl Neg for G1Affine {
     }
 }
 
-impl<'a, 'b> Add<&'b G1Projective> for &'a G1Affine {
+impl<'b> Add<&'b G1Projective> for &G1Affine {
     type Output = G1Projective;
 
     #[inline]
@@ -178,7 +176,7 @@ impl<'a, 'b> Add<&'b G1Projective> for &'a G1Affine {
     }
 }
 
-impl<'a, 'b> Add<&'b G1Affine> for &'a G1Projective {
+impl<'b> Add<&'b G1Affine> for &G1Projective {
     type Output = G1Projective;
 
     #[inline]
@@ -187,7 +185,7 @@ impl<'a, 'b> Add<&'b G1Affine> for &'a G1Projective {
     }
 }
 
-impl<'a, 'b> Sub<&'b G1Projective> for &'a G1Affine {
+impl<'b> Sub<&'b G1Projective> for &G1Affine {
     type Output = G1Projective;
 
     #[inline]
@@ -196,7 +194,7 @@ impl<'a, 'b> Sub<&'b G1Projective> for &'a G1Affine {
     }
 }
 
-impl<'a, 'b> Sub<&'b G1Affine> for &'a G1Projective {
+impl<'b> Sub<&'b G1Affine> for &G1Projective {
     type Output = G1Projective;
 
     #[inline]
@@ -230,10 +228,10 @@ const B: Fp = Fp::from_raw_unchecked([
 ]);
 
 impl AffineCoordinates for G1Affine {
-    type FieldRepr = GenericArray<u8, U48>;
+    type FieldRepr = [u8; 48];
 
     fn x(&self) -> Self::FieldRepr {
-        GenericArray::<u8, U48>::clone_from_slice(&self.x.to_bytes())
+        self.x.to_bytes()
     }
 
     fn y_is_odd(&self) -> Choice {
@@ -525,7 +523,7 @@ impl_serde!(
 
 /// This is an element of $\mathbb{G}_1$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
-#[derive(Copy, Clone, Debug, Hash)]
+#[derive(Copy, Clone, Debug)]
 pub struct G1Projective {
     pub(crate) x: Fp,
     pub(crate) y: Fp,
@@ -614,7 +612,15 @@ impl PartialEq for G1Projective {
     }
 }
 
-impl<'a> Neg for &'a G1Projective {
+impl core::hash::Hash for G1Projective {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.x.hash(state);
+        self.y.hash(state);
+        self.z.hash(state);
+    }
+}
+
+impl Neg for &G1Projective {
     type Output = G1Projective;
 
     #[inline]
@@ -636,7 +642,7 @@ impl Neg for G1Projective {
     }
 }
 
-impl<'a, 'b> Add<&'b G1Projective> for &'a G1Projective {
+impl<'b> Add<&'b G1Projective> for &G1Projective {
     type Output = G1Projective;
 
     #[inline]
@@ -645,7 +651,7 @@ impl<'a, 'b> Add<&'b G1Projective> for &'a G1Projective {
     }
 }
 
-impl<'a, 'b> Sub<&'b G1Projective> for &'a G1Projective {
+impl<'b> Sub<&'b G1Projective> for &G1Projective {
     type Output = G1Projective;
 
     #[inline]
@@ -654,7 +660,7 @@ impl<'a, 'b> Sub<&'b G1Projective> for &'a G1Projective {
     }
 }
 
-impl<'a, 'b> Mul<&'b Scalar> for &'a G1Projective {
+impl<'b> Mul<&'b Scalar> for &G1Projective {
     type Output = G1Projective;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
@@ -662,7 +668,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Projective {
     }
 }
 
-impl<'a, 'b> Mul<&'b G1Projective> for &'a Scalar {
+impl<'b> Mul<&'b G1Projective> for &Scalar {
     type Output = G1Projective;
 
     #[inline]
@@ -671,7 +677,7 @@ impl<'a, 'b> Mul<&'b G1Projective> for &'a Scalar {
     }
 }
 
-impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
+impl<'b> Mul<&'b Scalar> for &G1Affine {
     type Output = G1Projective;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
@@ -679,7 +685,7 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
     }
 }
 
-impl<'a, 'b> Mul<&'b G1Affine> for &'a Scalar {
+impl<'b> Mul<&'b G1Affine> for &Scalar {
     type Output = G1Projective;
 
     #[inline]
@@ -1210,7 +1216,6 @@ impl Group for G1Projective {
         self.is_identity()
     }
 
-    #[must_use]
     fn double(&self) -> Self {
         self.double()
     }
@@ -1991,14 +1996,32 @@ fn test_commutative_scalar_subgroup_multiplication() {
     let g1_p = G1Projective::GENERATOR;
 
     // By reference.
-    assert_eq!(&g1_a * &a, &a * &g1_a);
-    assert_eq!(&g1_p * &a, &a * &g1_p);
+    assert_eq!(
+        <&G1Affine as core::ops::Mul<&Scalar>>::mul(&g1_a, &a),
+        <&Scalar as core::ops::Mul<&G1Affine>>::mul(&a, &g1_a)
+    );
+    assert_eq!(
+        <&G1Projective as core::ops::Mul<&Scalar>>::mul(&g1_p, &a),
+        <&Scalar as core::ops::Mul<&G1Projective>>::mul(&a, &g1_p)
+    );
 
     // Mixed
-    assert_eq!(&g1_a * a.clone(), a.clone() * &g1_a);
-    assert_eq!(&g1_p * a.clone(), a.clone() * &g1_p);
-    assert_eq!(g1_a.clone() * &a, &a * g1_a.clone());
-    assert_eq!(g1_p.clone() * &a, &a * g1_p.clone());
+    assert_eq!(
+        <&G1Affine as core::ops::Mul<Scalar>>::mul(&g1_a, a),
+        <Scalar as core::ops::Mul<&G1Affine>>::mul(a, &g1_a)
+    );
+    assert_eq!(
+        <&G1Projective as core::ops::Mul<Scalar>>::mul(&g1_p, a),
+        <Scalar as core::ops::Mul<&G1Projective>>::mul(a, &g1_p)
+    );
+    assert_eq!(
+        <G1Affine as core::ops::Mul<&Scalar>>::mul(g1_a, &a),
+        <&Scalar as core::ops::Mul<G1Affine>>::mul(&a, g1_a)
+    );
+    assert_eq!(
+        <G1Projective as core::ops::Mul<&Scalar>>::mul(g1_p, &a),
+        <&Scalar as core::ops::Mul<G1Projective>>::mul(&a, g1_p)
+    );
 
     // By value.
     assert_eq!(g1_p * a, a * g1_p);
@@ -2053,7 +2076,7 @@ fn test_sum_of_products_alloc() {
     let h0 = G1Projective::random(&mut rng);
 
     let s = Scalar::random(&mut rng);
-    let s_clone = s.clone();
+    let s_clone = s;
     let s_tilde = Scalar::random(&mut rng);
     let c = Scalar::random(&mut rng);
 
@@ -2064,7 +2087,7 @@ fn test_sum_of_products_alloc() {
     assert_eq!(s, s_clone);
     assert_eq!(
         h0 * s_tilde,
-        G1Projective::sum_of_products(&[h0], &mut [s_tilde])
+        G1Projective::sum_of_products(&[h0], &[s_tilde])
     );
     assert_eq!(
         h0 * s_tilde,
@@ -2078,7 +2101,7 @@ fn test_sum_of_products_alloc() {
     assert_eq!(u_tilde, u * c + h0 * s_hat);
     assert_eq!(
         u_tilde,
-        G1Projective::sum_of_products(&[u, h0], &mut [c, s_hat])
+        G1Projective::sum_of_products(&[u, h0], &[c, s_hat])
     );
     assert_eq!(
         u_tilde,
@@ -2090,7 +2113,7 @@ fn test_sum_of_products_alloc() {
 fn test_hash() {
     use elliptic_curve::hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
-    const DST: &'static [u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
+    const DST: &[u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
 
     let tests: [(&'static [u8], &'static str); 5] = [
         (b"", "052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a108ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265"),

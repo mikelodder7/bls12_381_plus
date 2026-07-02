@@ -45,10 +45,7 @@ pub const fn decode_hex_byte(bytes: [u8; 2]) -> u8 {
             b @ b'a'..=b'f' => 10 + b - b'a',
             b @ b'A'..=b'F' => 10 + b - b'A',
             b => {
-                assert!(
-                    matches!(b, b'0'..=b'9' | b'a' ..= b'f' | b'A'..=b'F'),
-                    "invalid hex byte"
-                );
+                assert!(b.is_ascii_hexdigit(), "invalid hex byte");
                 0
             }
         };

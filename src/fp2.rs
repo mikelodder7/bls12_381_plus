@@ -10,7 +10,7 @@ use core::convert::TryFrom;
 use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
 
 /// A point in the multiplicative group of order p^2
-#[derive(Copy, Clone, Hash)]
+#[derive(Copy, Clone)]
 pub struct Fp2 {
     /// The `a` portion
     pub c0: Fp,
@@ -55,6 +55,13 @@ impl PartialEq for Fp2 {
     }
 }
 
+impl core::hash::Hash for Fp2 {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.c0.hash(state);
+        self.c1.hash(state);
+    }
+}
+
 impl ConditionallySelectable for Fp2 {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Fp2 {
@@ -64,7 +71,7 @@ impl ConditionallySelectable for Fp2 {
     }
 }
 
-impl<'a> Neg for &'a Fp2 {
+impl Neg for &Fp2 {
     type Output = Fp2;
 
     #[inline]
@@ -82,7 +89,7 @@ impl Neg for Fp2 {
     }
 }
 
-impl<'a, 'b> Sub<&'b Fp2> for &'a Fp2 {
+impl<'b> Sub<&'b Fp2> for &Fp2 {
     type Output = Fp2;
 
     #[inline]
@@ -91,7 +98,7 @@ impl<'a, 'b> Sub<&'b Fp2> for &'a Fp2 {
     }
 }
 
-impl<'a, 'b> Add<&'b Fp2> for &'a Fp2 {
+impl<'b> Add<&'b Fp2> for &Fp2 {
     type Output = Fp2;
 
     #[inline]
@@ -100,7 +107,7 @@ impl<'a, 'b> Add<&'b Fp2> for &'a Fp2 {
     }
 }
 
-impl<'a, 'b> Mul<&'b Fp2> for &'a Fp2 {
+impl<'b> Mul<&'b Fp2> for &Fp2 {
     type Output = Fp2;
 
     #[inline]
@@ -204,13 +211,13 @@ impl Fp2 {
         // c0' = (c0 + c1) * (c0 - c1)
         // c1' = 2 * c0 * c1
 
-        let a = (&self.c0).add(&self.c1);
-        let b = (&self.c0).sub(&self.c1);
-        let c = (&self.c0).add(&self.c0);
+        let a = Fp::add(&self.c0, &self.c1);
+        let b = Fp::sub(&self.c0, &self.c1);
+        let c = Fp::add(&self.c0, &self.c0);
 
         Fp2 {
-            c0: (&a).mul(&b),
-            c1: (&c).mul(&self.c1),
+            c0: Fp::mul(&a, &b),
+            c1: Fp::mul(&c, &self.c1),
         }
     }
 
@@ -237,24 +244,24 @@ impl Fp2 {
     /// Add self + rhs
     pub const fn add(&self, rhs: &Fp2) -> Self {
         Fp2 {
-            c0: (&self.c0).add(&rhs.c0),
-            c1: (&self.c1).add(&rhs.c1),
+            c0: Fp::add(&self.c0, &rhs.c0),
+            c1: Fp::add(&self.c1, &rhs.c1),
         }
     }
 
     /// Subtract self - rhs
     pub const fn sub(&self, rhs: &Fp2) -> Self {
         Self {
-            c0: (&self.c0).sub(&rhs.c0),
-            c1: (&self.c1).sub(&rhs.c1),
+            c0: Fp::sub(&self.c0, &rhs.c0),
+            c1: Fp::sub(&self.c1, &rhs.c1),
         }
     }
 
     /// Negate this element
     pub const fn neg(&self) -> Self {
         Fp2 {
-            c0: (&self.c0).neg(),
-            c1: (&self.c1).neg(),
+            c0: Fp::neg(&self.c0),
+            c1: Fp::neg(&self.c1),
         }
     }
 
@@ -419,7 +426,7 @@ fn test_conditional_selection() {
 fn test_equality() {
     fn is_equal(a: &Fp2, b: &Fp2) -> bool {
         let eq = a == b;
-        let ct_eq = a.ct_eq(&b);
+        let ct_eq = a.ct_eq(b);
 
         assert_eq!(eq, bool::from(ct_eq));
 
