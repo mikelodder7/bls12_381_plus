@@ -215,18 +215,47 @@ macro_rules! impl_binops_multiplicative {
 
 macro_rules! impl_pippenger_sum_of_products {
     () => {
+        const SUM_OF_PRODUCTS_STRAUS_THRESHOLD: usize = 128;
+
         /// Use pippenger multi-exponentiation method to compute
         /// the sum of multiple points raise to scalars.
-        /// This uses a fixed window of 4 to be constant time
+        /// This is constant time with respect to the scalars.
         #[cfg(feature = "alloc")]
         pub fn sum_of_products(points: &[Self], scalars: &[Scalar]) -> Self {
             use alloc::vec::Vec;
+
+            if core::cmp::min(points.len(), scalars.len()) < Self::SUM_OF_PRODUCTS_STRAUS_THRESHOLD
+            {
+                return <Self as elliptic_curve_tools::legacy::SumOfProducts>::sum_of_products_iter(
+                    scalars.iter().copied().zip(points.iter().copied()),
+                );
+            }
 
             let ss: Vec<Scalar> = scalars
                 .iter()
                 .map(|s| Scalar::montgomery_reduce(s.0[0], s.0[1], s.0[2], s.0[3], 0, 0, 0, 0))
                 .collect();
             Self::sum_of_products_pippenger(points, ss.as_slice())
+        }
+
+        /// Use variable-time multi-exponentiation to compute the sum of multiple
+        /// points raised to scalars.
+        ///
+        /// This is faster than [`Self::sum_of_products`] but may leak scalar
+        /// information through memory access patterns. Use only when every scalar
+        /// is public.
+        #[cfg(feature = "alloc")]
+        pub fn sum_of_products_vartime(points: &[Self], scalars: &[Scalar]) -> Self {
+            use alloc::vec::Vec;
+
+            let pairs: Vec<(Scalar, Self)> = scalars
+                .iter()
+                .copied()
+                .zip(points.iter().copied())
+                .collect();
+            <Self as elliptic_curve_tools::legacy::SumOfProducts>::sum_of_products_vartime(
+                pairs.as_slice(),
+            )
         }
 
         /// Use pippenger multi-exponentiation method to compute

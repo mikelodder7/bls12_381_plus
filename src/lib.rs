@@ -31,9 +31,13 @@ extern crate alloc;
 extern crate std;
 
 pub use elliptic_curve;
+pub use elliptic_curve_014;
 pub use ff;
+pub use ff_014;
 #[cfg(feature = "groups")]
 pub use group;
+#[cfg(feature = "groups")]
+pub use group_014;
 
 #[cfg(test)]
 #[cfg(feature = "groups")]
@@ -49,6 +53,7 @@ pub mod notes {
     pub mod serialization;
 }
 
+mod compat_014;
 mod scalar;
 
 #[cfg(target_arch = "wasm32")]

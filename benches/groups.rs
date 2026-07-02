@@ -6,9 +6,47 @@ extern crate criterion;
 
 use bls12_381_plus::*;
 
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
+use elliptic_curve::hash2curve::ExpandMsgXmd;
+use std::hint::black_box;
 
 fn criterion_benchmark(c: &mut Criterion) {
+    // Hash-to-curve
+    {
+        let msg = b"bench message";
+        let g1_dst = b"BLS12381G1_XMD:SHA-256_SSWU_RO_BENCH";
+        let g1_encode_dst = b"BLS12381G1_XMD:SHA-256_SSWU_NU_BENCH";
+        let g2_dst = b"BLS12381G2_XMD:SHA-256_SSWU_RO_BENCH";
+        let g2_encode_dst = b"BLS12381G2_XMD:SHA-256_SSWU_NU_BENCH";
+
+        c.bench_function("G1Projective hash to curve", move |b| {
+            b.iter(|| {
+                G1Projective::hash::<ExpandMsgXmd<sha2::Sha256>>(black_box(msg), black_box(g1_dst))
+            })
+        });
+        c.bench_function("G1Projective encode to curve", move |b| {
+            b.iter(|| {
+                G1Projective::encode::<ExpandMsgXmd<sha2::Sha256>>(
+                    black_box(msg),
+                    black_box(g1_encode_dst),
+                )
+            })
+        });
+        c.bench_function("G2Projective hash to curve", move |b| {
+            b.iter(|| {
+                G2Projective::hash::<ExpandMsgXmd<sha2::Sha256>>(black_box(msg), black_box(g2_dst))
+            })
+        });
+        c.bench_function("G2Projective encode to curve", move |b| {
+            b.iter(|| {
+                G2Projective::encode::<ExpandMsgXmd<sha2::Sha256>>(
+                    black_box(msg),
+                    black_box(g2_encode_dst),
+                )
+            })
+        });
+    }
+
     // Pairings
     {
         let g = G1Affine::generator();
@@ -33,7 +71,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     {
         let name = "G1Affine";
         let a = G1Affine::generator();
-        let s = Scalar::from_raw([1, 2, 3, 4]);
+        let s = Scalar::from(1u64);
         let compressed = [0u8; 48];
         let uncompressed = [0u8; 96];
         c.bench_function(&format!("{} check on curve", name), move |b| {
@@ -63,7 +101,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let name = "G1Projective";
         let a = G1Projective::GENERATOR;
         let a_affine = G1Affine::generator();
-        let s = Scalar::from_raw([1, 2, 3, 4]);
+        let s = Scalar::from(1u64);
 
         const N: usize = 10000;
         let v = vec![G1Projective::GENERATOR; N];
@@ -102,7 +140,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     {
         let name = "G2Affine";
         let a = G2Affine::generator();
-        let s = Scalar::from_raw([1, 2, 3, 4]);
+        let s = Scalar::from(1u64);
         let compressed = [0u8; 96];
         let uncompressed = [0u8; 192];
         c.bench_function(&format!("{} check on curve", name), move |b| {
@@ -132,7 +170,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let name = "G2Projective";
         let a = G2Projective::GENERATOR;
         let a_affine = G2Affine::generator();
-        let s = Scalar::from_raw([1, 2, 3, 4]);
+        let s = Scalar::from(1u64);
 
         const N: usize = 10000;
         let v = vec![G2Projective::GENERATOR; N];

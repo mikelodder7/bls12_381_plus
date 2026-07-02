@@ -1,3 +1,11 @@
+# 0.9.0-rc0
+
+- Release candidate for `0.9.0`.
+- Pinned core crypto trait dependencies to exact latest compatible patch releases.
+- Bumped `criterion` to `0.8.2`.
+- Use `elliptic-curve-tools` for faster small/medium-size sum-of-products with `alloc`.
+- Added aliased `elliptic-curve`, `ff`, and `group` `0.14` compatibility while preserving `0.13` traits for `pairing`.
+
 # 0.8.11
 
 - Added invert to Gt

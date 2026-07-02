@@ -2640,6 +2640,10 @@ fn test_sum_of_products_alloc() {
         h0 * s_tilde,
         G2Projective::sum_of_products(&[h0], &mut [s_tilde])
     );
+    assert_eq!(
+        h0 * s_tilde,
+        G2Projective::sum_of_products_vartime(&[h0], &[s_tilde])
+    );
 
     // test schnorr proof
     let u = h0 * s;
@@ -2649,6 +2653,10 @@ fn test_sum_of_products_alloc() {
     assert_eq!(
         u_tilde,
         G2Projective::sum_of_products(&[u, h0], &mut [c, s_hat])
+    );
+    assert_eq!(
+        u_tilde,
+        G2Projective::sum_of_products_vartime(&[u, h0], &[c, s_hat])
     );
 }
 

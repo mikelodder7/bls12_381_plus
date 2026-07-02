@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.8.18"
+version = "0.9.0-rc0"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -33,7 +33,7 @@ sha2 = "0.10"
 sha3 = "0.10"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-criterion = "0.5"
+criterion = "0.8.2"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
@@ -44,25 +44,25 @@ harness = false
 required-features = ["groups"]
 
 [dependencies.elliptic-curve]
-version = "0.13"
+version = "0.13.8"
 features = ["hash2curve", "hazmat"]
 default-features = false
 
 [dependencies.ff]
-version = "0.13"
+version = "0.13.1"
 default-features = false
 
 [dependencies.group]
-version = "0.13"
+version = "0.13.0"
 default-features = false
 optional = true
 
 [dependencies.pairing]
-version = "0.23"
+version = "0.23.0"
 optional = true
 
 [dependencies.rand_core]
-version = "0.6"
+version = "0.6.4"
 default-features = false
 
 [dependencies.subtle]
@@ -88,6 +88,29 @@ version = "0.3"
 [dependencies.sha2]
 version = "0.10"
 default-features = false
+
+[dependencies.ff_014]
+package = "ff"
+version = "0.14.0"
+default-features = false
+
+[dependencies.group_014]
+package = "group"
+version = "0.14.0"
+default-features = false
+optional = true
+
+[dependencies.elliptic_curve_014]
+package = "elliptic-curve"
+version = "0.14.1"
+default-features = false
+features = ["arithmetic"]
+
+[dependencies.elliptic-curve-tools]
+version = "0.3.0"
+default-features = false
+features = ["legacy"]
+optional = true
 
 [dependencies.ark-bls12-381]
 version = "0.4"
@@ -119,10 +142,10 @@ optional = true
 
 [features]
 default = ["groups", "pairings", "alloc", "bits"]
-bits = ["ff/bits"]
+bits = ["ff/bits", "ff_014/bits"]
 expose-fields = ["groups"]
-groups = ["group"]
+groups = ["group", "group_014"]
 pairings = ["groups", "pairing"]
-alloc = ["group/alloc"]
+alloc = ["group/alloc", "group_014/alloc", "elliptic-curve-tools/alloc"]
 ark = ["ark-bls12-381", "ark-ec", "ark-ff", "ark-serialize", "num-bigint", "num-traits", "rand", "std"]
 std = []
