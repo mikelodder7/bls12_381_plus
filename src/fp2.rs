@@ -7,7 +7,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::fp::Fp;
 use core::convert::TryFrom;
-use elliptic_curve::hash2curve::{ExpandMsg, Expander, Sgn0};
+use elliptic_curve_013::hash2curve::{ExpandMsg, Expander, Sgn0};
 
 /// A point in the multiplicative group of order p^2
 #[derive(Copy, Clone)]

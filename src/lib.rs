@@ -31,13 +31,13 @@ extern crate alloc;
 extern crate std;
 
 pub use elliptic_curve;
-pub use elliptic_curve_014;
+pub use elliptic_curve_013;
 pub use ff;
-pub use ff_014;
+pub use ff_013;
 #[cfg(feature = "groups")]
 pub use group;
 #[cfg(feature = "groups")]
-pub use group_014;
+pub use group_013;
 
 #[cfg(test)]
 #[cfg(feature = "groups")]
@@ -85,7 +85,7 @@ pub use g2::{G2Compressed, G2Uncompressed};
 mod fp12;
 mod fp6;
 
-use elliptic_curve::{
+use elliptic_curve_013::{
     bigint::{ArrayEncoding, U384},
     consts::U48,
     point::PointCompression,

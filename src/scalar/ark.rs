@@ -10,7 +10,7 @@ use ark_serialize::{
 use core::iter;
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 use core::str::FromStr;
-use ff::{Field, PrimeField};
+use ff_013::{Field, PrimeField};
 use num_bigint::BigUint;
 use num_traits::Num;
 use subtle::ConstantTimeEq;

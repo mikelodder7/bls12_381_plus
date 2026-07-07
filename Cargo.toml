@@ -14,7 +14,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT/Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.9.0-rc0"
+version = "0.9.0-rc1"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -43,16 +43,19 @@ name = "groups"
 harness = false
 required-features = ["groups"]
 
-[dependencies.elliptic-curve]
+[dependencies.elliptic_curve_013]
+package = "elliptic-curve"
 version = "0.13.8"
 features = ["hash2curve", "hazmat"]
 default-features = false
 
-[dependencies.ff]
+[dependencies.ff_013]
+package = "ff"
 version = "0.13.1"
 default-features = false
 
-[dependencies.group]
+[dependencies.group_013]
+package = "group"
 version = "0.13.0"
 default-features = false
 optional = true
@@ -89,19 +92,16 @@ version = "0.3"
 version = "0.10"
 default-features = false
 
-[dependencies.ff_014]
-package = "ff"
+[dependencies.ff]
 version = "0.14.0"
 default-features = false
 
-[dependencies.group_014]
-package = "group"
+[dependencies.group]
 version = "0.14.0"
 default-features = false
 optional = true
 
-[dependencies.elliptic_curve_014]
-package = "elliptic-curve"
+[dependencies.elliptic-curve]
 version = "0.14.1"
 default-features = false
 features = ["arithmetic"]
@@ -142,10 +142,10 @@ optional = true
 
 [features]
 default = ["groups", "pairings", "alloc", "bits"]
-bits = ["ff/bits", "ff_014/bits"]
+bits = ["ff_013/bits", "ff/bits"]
 expose-fields = ["groups"]
-groups = ["group", "group_014"]
+groups = ["group_013", "group"]
 pairings = ["groups", "pairing"]
-alloc = ["group/alloc", "group_014/alloc", "elliptic-curve-tools/alloc"]
+alloc = ["group_013/alloc", "group/alloc", "elliptic-curve-tools/alloc"]
 ark = ["ark-bls12-381", "ark-ec", "ark-ff", "ark-serialize", "num-bigint", "num-traits", "rand", "std"]
 std = []

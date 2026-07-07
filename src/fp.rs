@@ -6,7 +6,7 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
-use elliptic_curve::{
+use elliptic_curve_013::{
     bigint::{ByteArray, U512},
     consts::U16,
     hash2curve::{
@@ -14,7 +14,7 @@ use elliptic_curve::{
         OsswuMapParams, Sgn0,
     },
 };
-use ff::Field;
+use ff_013::Field;
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -175,7 +175,7 @@ impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
 impl FromOkm for Fp {
-    type Length = <U512 as elliptic_curve::bigint::ArrayEncoding>::ByteSize;
+    type Length = <U512 as elliptic_curve_013::bigint::ArrayEncoding>::ByteSize;
 
     fn from_okm(data: &ByteArray<U512>) -> Self {
         let input = arrayref::array_ref![data, 0, 64];
@@ -323,7 +323,7 @@ impl Field for Fp {
     }
 
     fn sqrt_ratio(_num: &Self, _div: &Self) -> (Choice, Self) {
-        // ff::helpers::sqrt_ratio_generic(num, div)
+        // ff_013::helpers::sqrt_ratio_generic(num, div)
         unimplemented!()
     }
 }

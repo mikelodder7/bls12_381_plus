@@ -1,5 +1,5 @@
 use crate::{Bls12381G1, Bls12381G2, Scalar};
-use elliptic_curve_014::{
+use elliptic_curve::{
     bigint::{Odd, U384},
     consts::U48,
     rand_core::TryRng,
@@ -7,7 +7,7 @@ use elliptic_curve_014::{
 };
 use subtle::{Choice, ConstantTimeEq, CtOption};
 
-impl ff_014::Field for Scalar {
+impl ff::Field for Scalar {
     const ZERO: Self = Self::ZERO;
     const ONE: Self = Self::ONE;
 
@@ -30,11 +30,11 @@ impl ff_014::Field for Scalar {
     }
 
     fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
-        ff_014::helpers::sqrt_ratio_generic(num, div)
+        ff::helpers::sqrt_ratio_generic(num, div)
     }
 
     fn sqrt(&self) -> CtOption<Self> {
-        ff_014::helpers::sqrt_tonelli_shanks(
+        ff::helpers::sqrt_tonelli_shanks(
             self,
             [
                 0x7fff_2dff_7fff_ffff,
@@ -50,7 +50,7 @@ impl ff_014::Field for Scalar {
     }
 }
 
-impl ff_014::PrimeField for Scalar {
+impl ff::PrimeField for Scalar {
     type Repr = [u8; 32];
 
     fn from_repr(mut repr: Self::Repr) -> CtOption<Self> {
@@ -73,14 +73,14 @@ impl ff_014::PrimeField for Scalar {
 
     const MODULUS: &'static str =
         "0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
-    const NUM_BITS: u32 = <Scalar as ff::PrimeField>::NUM_BITS;
+    const NUM_BITS: u32 = <Scalar as ff_013::PrimeField>::NUM_BITS;
     const CAPACITY: u32 = Self::NUM_BITS - 1;
-    const TWO_INV: Self = <Scalar as ff::PrimeField>::TWO_INV;
-    const MULTIPLICATIVE_GENERATOR: Self = <Scalar as ff::PrimeField>::MULTIPLICATIVE_GENERATOR;
-    const S: u32 = <Scalar as ff::PrimeField>::S;
-    const ROOT_OF_UNITY: Self = <Scalar as ff::PrimeField>::ROOT_OF_UNITY;
-    const ROOT_OF_UNITY_INV: Self = <Scalar as ff::PrimeField>::ROOT_OF_UNITY_INV;
-    const DELTA: Self = <Scalar as ff::PrimeField>::DELTA;
+    const TWO_INV: Self = <Scalar as ff_013::PrimeField>::TWO_INV;
+    const MULTIPLICATIVE_GENERATOR: Self = <Scalar as ff_013::PrimeField>::MULTIPLICATIVE_GENERATOR;
+    const S: u32 = <Scalar as ff_013::PrimeField>::S;
+    const ROOT_OF_UNITY: Self = <Scalar as ff_013::PrimeField>::ROOT_OF_UNITY;
+    const ROOT_OF_UNITY_INV: Self = <Scalar as ff_013::PrimeField>::ROOT_OF_UNITY_INV;
+    const DELTA: Self = <Scalar as ff_013::PrimeField>::DELTA;
 }
 
 #[cfg(all(feature = "bits", not(target_pointer_width = "64")))]
@@ -90,10 +90,10 @@ type ReprBits014 = [u32; 8];
 type ReprBits014 = [u64; 4];
 
 #[cfg(feature = "bits")]
-impl ff_014::PrimeFieldBits for Scalar {
+impl ff::PrimeFieldBits for Scalar {
     type ReprBits = ReprBits014;
 
-    fn to_le_bits(&self) -> ff_014::FieldBits<Self::ReprBits> {
+    fn to_le_bits(&self) -> ff::FieldBits<Self::ReprBits> {
         let bytes = self.to_le_bytes();
 
         #[cfg(not(target_pointer_width = "64"))]
@@ -116,13 +116,13 @@ impl ff_014::PrimeFieldBits for Scalar {
             u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
         ];
 
-        ff_014::FieldBits::new(limbs)
+        ff::FieldBits::new(limbs)
     }
 
-    fn char_le_bits() -> ff_014::FieldBits<Self::ReprBits> {
+    fn char_le_bits() -> ff::FieldBits<Self::ReprBits> {
         #[cfg(not(target_pointer_width = "64"))]
         {
-            ff_014::FieldBits::new([
+            ff::FieldBits::new([
                 0x0000_0001,
                 0xffff_ffff,
                 0xfffe_5bfe,
@@ -135,7 +135,7 @@ impl ff_014::PrimeFieldBits for Scalar {
         }
 
         #[cfg(target_pointer_width = "64")]
-        ff_014::FieldBits::new([
+        ff::FieldBits::new([
             0xffff_ffff_0000_0001,
             0x53bd_a402_fffe_5bfe,
             0x3339_d808_09a1_d805,
@@ -155,7 +155,7 @@ impl Curve for Bls12381G1 {
 
 impl PrimeCurve for Bls12381G1 {}
 
-impl elliptic_curve_014::point::PointCompression for Bls12381G1 {
+impl elliptic_curve::point::PointCompression for Bls12381G1 {
     const COMPRESS_POINTS: bool = true;
 }
 
@@ -170,7 +170,7 @@ impl Curve for Bls12381G2 {
 
 impl PrimeCurve for Bls12381G2 {}
 
-impl elliptic_curve_014::point::PointCompression for Bls12381G2 {
+impl elliptic_curve::point::PointCompression for Bls12381G2 {
     const COMPRESS_POINTS: bool = true;
 }
 
@@ -180,14 +180,14 @@ mod groups {
     use crate::{G1Affine, G1Compressed, G1Projective, G1Uncompressed, G2Affine, G2Compressed};
     use crate::{G2Projective, G2Uncompressed, Scalar};
     use elliptic_curve::consts::{U48, U96};
-    use elliptic_curve::generic_array::GenericArray;
-    use elliptic_curve::hash2curve::ExpandMsgXmd;
-    use elliptic_curve::hash2curve::Sgn0;
-    use elliptic_curve_014::rand_core::TryRng;
-    use group_014::{Curve, CurveAffine, Group, GroupEncoding, UncompressedEncoding};
+    use elliptic_curve::rand_core::TryRng;
+    use elliptic_curve_013::generic_array::GenericArray;
+    use elliptic_curve_013::hash2curve::ExpandMsgXmd;
+    use elliptic_curve_013::hash2curve::Sgn0;
+    use group::{Curve, CurveAffine, Group, GroupEncoding, UncompressedEncoding};
     use subtle::{Choice, CtOption};
 
-    impl elliptic_curve_014::point::AffineCoordinates for G1Affine {
+    impl elliptic_curve::point::AffineCoordinates for G1Affine {
         type FieldRepr = GenericArray<u8, U48>;
 
         fn from_coordinates(x: &Self::FieldRepr, y: &Self::FieldRepr) -> CtOption<Self> {
@@ -244,7 +244,7 @@ mod groups {
     }
 
     #[cfg(feature = "alloc")]
-    impl group_014::WnafGroup for G1Projective {
+    impl group::WnafGroup for G1Projective {
         fn recommended_wnaf_for_num_scalars(num_scalars: usize) -> usize {
             const RECOMMENDATIONS: [usize; 12] =
                 [1, 3, 7, 20, 43, 120, 273, 563, 1630, 3128, 7933, 62569];
@@ -274,8 +274,8 @@ mod groups {
         }
     }
 
-    impl group_014::prime::PrimeGroup for G1Projective {}
-    impl group_014::prime::PrimeCurve for G1Projective {}
+    impl group::prime::PrimeGroup for G1Projective {}
+    impl group::prime::PrimeCurve for G1Projective {}
 
     impl CurveAffine for G1Affine {
         type Curve = G1Projective;
@@ -318,15 +318,15 @@ mod groups {
         type Repr = G1Compressed;
 
         fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
-            <Self as group::GroupEncoding>::from_bytes(bytes)
+            <Self as group_013::GroupEncoding>::from_bytes(bytes)
         }
 
         fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
-            <Self as group::GroupEncoding>::from_bytes_unchecked(bytes)
+            <Self as group_013::GroupEncoding>::from_bytes_unchecked(bytes)
         }
 
         fn to_bytes(&self) -> Self::Repr {
-            <Self as group::GroupEncoding>::to_bytes(self)
+            <Self as group_013::GroupEncoding>::to_bytes(self)
         }
     }
 
@@ -334,19 +334,19 @@ mod groups {
         type Uncompressed = G1Uncompressed;
 
         fn from_uncompressed(bytes: &Self::Uncompressed) -> CtOption<Self> {
-            <Self as group::UncompressedEncoding>::from_uncompressed(bytes)
+            <Self as group_013::UncompressedEncoding>::from_uncompressed(bytes)
         }
 
         fn from_uncompressed_unchecked(bytes: &Self::Uncompressed) -> CtOption<Self> {
-            <Self as group::UncompressedEncoding>::from_uncompressed_unchecked(bytes)
+            <Self as group_013::UncompressedEncoding>::from_uncompressed_unchecked(bytes)
         }
 
         fn to_uncompressed(&self) -> Self::Uncompressed {
-            <Self as group::UncompressedEncoding>::to_uncompressed(self)
+            <Self as group_013::UncompressedEncoding>::to_uncompressed(self)
         }
     }
 
-    impl elliptic_curve_014::point::AffineCoordinates for G2Affine {
+    impl elliptic_curve::point::AffineCoordinates for G2Affine {
         type FieldRepr = GenericArray<u8, U96>;
 
         fn from_coordinates(x: &Self::FieldRepr, y: &Self::FieldRepr) -> CtOption<Self> {
@@ -409,7 +409,7 @@ mod groups {
     }
 
     #[cfg(feature = "alloc")]
-    impl group_014::WnafGroup for G2Projective {
+    impl group::WnafGroup for G2Projective {
         fn recommended_wnaf_for_num_scalars(num_scalars: usize) -> usize {
             const RECOMMENDATIONS: [usize; 11] =
                 [1, 3, 8, 20, 47, 126, 260, 826, 1501, 4555, 84071];
@@ -439,8 +439,8 @@ mod groups {
         }
     }
 
-    impl group_014::prime::PrimeGroup for G2Projective {}
-    impl group_014::prime::PrimeCurve for G2Projective {}
+    impl group::prime::PrimeGroup for G2Projective {}
+    impl group::prime::PrimeCurve for G2Projective {}
 
     impl CurveAffine for G2Affine {
         type Curve = G2Projective;
@@ -483,15 +483,15 @@ mod groups {
         type Repr = G2Compressed;
 
         fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
-            <Self as group::GroupEncoding>::from_bytes(bytes)
+            <Self as group_013::GroupEncoding>::from_bytes(bytes)
         }
 
         fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
-            <Self as group::GroupEncoding>::from_bytes_unchecked(bytes)
+            <Self as group_013::GroupEncoding>::from_bytes_unchecked(bytes)
         }
 
         fn to_bytes(&self) -> Self::Repr {
-            <Self as group::GroupEncoding>::to_bytes(self)
+            <Self as group_013::GroupEncoding>::to_bytes(self)
         }
     }
 
@@ -499,29 +499,29 @@ mod groups {
         type Uncompressed = G2Uncompressed;
 
         fn from_uncompressed(bytes: &Self::Uncompressed) -> CtOption<Self> {
-            <Self as group::UncompressedEncoding>::from_uncompressed(bytes)
+            <Self as group_013::UncompressedEncoding>::from_uncompressed(bytes)
         }
 
         fn from_uncompressed_unchecked(bytes: &Self::Uncompressed) -> CtOption<Self> {
-            <Self as group::UncompressedEncoding>::from_uncompressed_unchecked(bytes)
+            <Self as group_013::UncompressedEncoding>::from_uncompressed_unchecked(bytes)
         }
 
         fn to_uncompressed(&self) -> Self::Uncompressed {
-            <Self as group::UncompressedEncoding>::to_uncompressed(self)
+            <Self as group_013::UncompressedEncoding>::to_uncompressed(self)
         }
     }
 
     #[cfg(feature = "pairings")]
     mod gt {
         use crate::{pairings::GtRepr, Gt, Scalar};
-        use ff_014::Field;
-        use group_014::{Group, GroupEncoding};
+        use ff::Field;
+        use group::{Group, GroupEncoding};
         use subtle::{Choice, ConstantTimeEq, CtOption};
 
         impl Group for Gt {
             type Scalar = Scalar;
 
-            fn try_random<R: elliptic_curve_014::rand_core::TryRng + ?Sized>(
+            fn try_random<R: elliptic_curve::rand_core::TryRng + ?Sized>(
                 rng: &mut R,
             ) -> Result<Self, R::Error> {
                 loop {
@@ -537,7 +537,7 @@ mod groups {
             }
 
             fn generator() -> Self {
-                <Self as group::Group>::generator()
+                <Self as group_013::Group>::generator()
             }
 
             fn is_identity(&self) -> Choice {
@@ -553,15 +553,15 @@ mod groups {
             type Repr = GtRepr;
 
             fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
-                <Self as group::GroupEncoding>::from_bytes(bytes)
+                <Self as group_013::GroupEncoding>::from_bytes(bytes)
             }
 
             fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
-                <Self as group::GroupEncoding>::from_bytes_unchecked(bytes)
+                <Self as group_013::GroupEncoding>::from_bytes_unchecked(bytes)
             }
 
             fn to_bytes(&self) -> Self::Repr {
-                <Self as group::GroupEncoding>::to_bytes(self)
+                <Self as group_013::GroupEncoding>::to_bytes(self)
             }
         }
     }

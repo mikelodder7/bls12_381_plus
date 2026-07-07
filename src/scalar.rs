@@ -9,12 +9,12 @@ use core::fmt::{self, Formatter};
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 
-use ff::{Field, PrimeField};
+use ff_013::{Field, PrimeField};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
-use elliptic_curve::{
+use elliptic_curve_013::{
     bigint::{Encoding, U256, U384, U512},
     ops::{Invert, Reduce},
     scalar::{FromUintUnchecked, IsHigh},
@@ -23,7 +23,7 @@ use elliptic_curve::{
 
 use crate::Bls12381G1;
 #[cfg(feature = "bits")]
-use ff::{FieldBits, PrimeFieldBits};
+use ff_013::{FieldBits, PrimeFieldBits};
 
 use crate::util::{adc, decode_hex_into_slice, mac, sbb};
 
@@ -120,7 +120,10 @@ impl PartialOrd for Scalar {
 impl Ord for Scalar {
     #[inline]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        match (bool::from(self.is_high()), bool::from(other.is_high())) {
+        match (
+            bool::from(scalar_is_high(self)),
+            bool::from(scalar_is_high(other)),
+        ) {
             (false, false) | (true, true) => self.to_le_bytes().cmp(&other.to_le_bytes()),
             (false, true) => core::cmp::Ordering::Greater,
             (true, false) => core::cmp::Ordering::Less,
@@ -148,6 +151,16 @@ const HALF_MODULUS: Scalar = Scalar([
     0x199c_ec04_04d0_ec02,
     0x39f6_d3a9_94ce_bea4,
 ]);
+
+#[inline]
+fn scalar_is_high(scalar: &Scalar) -> Choice {
+    let mut borrow = 0;
+    for i in 0..4 {
+        let (_, b) = sbb(HALF_MODULUS.0[i], scalar.0[i], borrow);
+        borrow = b;
+    }
+    ((borrow == u64::MAX) as u8).into()
+}
 
 /// Constant representing the modulus
 /// q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
@@ -853,9 +866,9 @@ impl Scalar {
     /// Hashes the input messages and domain separation tag to a `Scalar`
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> elliptic_curve::hash2curve::ExpandMsg<'a>,
+        X: for<'a> elliptic_curve_013::hash2curve::ExpandMsg<'a>,
     {
-        use elliptic_curve::hash2curve::Expander;
+        use elliptic_curve_013::hash2curve::Expander;
 
         let d = [dst];
         let mut expander = X::expand_message(&[msg], &d, 48).unwrap();
@@ -900,12 +913,12 @@ impl Field for Scalar {
     }
 
     fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
-        ff::helpers::sqrt_ratio_generic(num, div)
+        ff_013::helpers::sqrt_ratio_generic(num, div)
     }
 
     fn sqrt(&self) -> CtOption<Self> {
         // (t - 1) // 2 = 6104339283789297388802252303364915521546564123189034618274734669823
-        ff::helpers::sqrt_tonelli_shanks(
+        ff_013::helpers::sqrt_tonelli_shanks(
             self,
             [
                 0x7fff_2dff_7fff_ffff,
@@ -1361,12 +1374,13 @@ impl Invert for Scalar {
 
 impl IsHigh for Scalar {
     fn is_high(&self) -> Choice {
-        let mut borrow = 0;
-        for i in 0..4 {
-            let (_, b) = sbb(HALF_MODULUS.0[i], self.0[i], borrow);
-            borrow = b;
-        }
-        ((borrow == u64::MAX) as u8).into()
+        scalar_is_high(self)
+    }
+}
+
+impl elliptic_curve::scalar::IsHigh for Scalar {
+    fn is_high(&self) -> Choice {
+        scalar_is_high(self)
     }
 }
 
@@ -1533,6 +1547,20 @@ pub fn run_test_wasm() {
     let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
     let u = U512::from(s);
     assert_eq!(u, U512::from(s));
+}
+
+#[test]
+fn scalar_implements_elliptic_curve_014_is_high() {
+    fn assert_is_high<T: elliptic_curve::scalar::IsHigh>() {}
+
+    assert_is_high::<Scalar>();
+    assert!(!bool::from(elliptic_curve::scalar::IsHigh::is_high(
+        &Scalar::ZERO
+    )));
+    assert_eq!(
+        bool::from(elliptic_curve::scalar::IsHigh::is_high(&Scalar::ONE)),
+        bool::from(scalar_is_high(&Scalar::ONE))
+    );
 }
 
 #[test]

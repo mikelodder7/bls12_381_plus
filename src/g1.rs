@@ -7,7 +7,7 @@ use core::borrow::Borrow;
 use core::fmt::{self, Formatter};
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use group::{
+use group_013::{
     prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
     Curve, Group, GroupEncoding, UncompressedEncoding,
 };
@@ -15,15 +15,15 @@ use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
-use group::WnafGroup;
+use group_013::WnafGroup;
 
 use crate::fp::Fp;
 use crate::util::decode_hex_into_slice;
 use crate::Scalar;
-use elliptic_curve::hash2curve::{ExpandMsgXmd, Sgn0};
-use elliptic_curve::ops::{LinearCombination, MulByGenerator};
-use elliptic_curve::point::AffineCoordinates;
-use elliptic_curve::{
+use elliptic_curve_013::hash2curve::{ExpandMsgXmd, Sgn0};
+use elliptic_curve_013::ops::{LinearCombination, MulByGenerator};
+use elliptic_curve_013::point::AffineCoordinates;
+use elliptic_curve_013::{
     group::cofactor::CofactorGroup,
     hash2curve::{ExpandMsg, MapToCurve},
 };
@@ -2030,7 +2030,7 @@ fn test_commutative_scalar_subgroup_multiplication() {
 
 #[test]
 fn test_sum_of_products() {
-    use ff::Field;
+    use ff_013::Field;
     use rand_core::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
@@ -2066,7 +2066,7 @@ fn test_sum_of_products() {
 #[cfg(feature = "alloc")]
 #[test]
 fn test_sum_of_products_alloc() {
-    use ff::Field;
+    use ff_013::Field;
     use rand_core::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
@@ -2111,7 +2111,7 @@ fn test_sum_of_products_alloc() {
 
 #[test]
 fn test_hash() {
-    use elliptic_curve::hash2curve::ExpandMsgXmd;
+    use elliptic_curve_013::hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
     const DST: &[u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
 
