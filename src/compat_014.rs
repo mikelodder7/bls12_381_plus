@@ -1,9 +1,9 @@
 use crate::{Bls12381G1, Bls12381G2, Scalar};
 use elliptic_curve::{
+    Curve, PrimeCurve,
     bigint::{Odd, U384},
     consts::U48,
     rand_core::TryRng,
-    Curve, PrimeCurve,
 };
 use subtle::{Choice, ConstantTimeEq, CtOption};
 
@@ -177,8 +177,9 @@ impl elliptic_curve::point::PointCompression for Bls12381G2 {
 #[cfg(feature = "groups")]
 #[allow(deprecated)]
 mod groups {
-    use crate::{G1Affine, G1Compressed, G1Projective, G1Uncompressed, G2Affine, G2Compressed};
-    use crate::{G2Projective, G2Uncompressed, Scalar};
+    use crate::g1::{G1Compressed, G1Uncompressed};
+    use crate::g2::{G2Compressed, G2Uncompressed};
+    use crate::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
     use elliptic_curve::consts::{U48, U96};
     use elliptic_curve::rand_core::TryRng;
     use elliptic_curve_013::generic_array::GenericArray;
@@ -513,7 +514,7 @@ mod groups {
 
     #[cfg(feature = "pairings")]
     mod gt {
-        use crate::{pairings::GtRepr, Gt, Scalar};
+        use crate::{Gt, Scalar, pairings::GtRepr};
         use ff::Field;
         use group::{Group, GroupEncoding};
         use subtle::{Choice, ConstantTimeEq, CtOption};

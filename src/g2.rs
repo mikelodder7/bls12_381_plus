@@ -8,8 +8,8 @@ use core::fmt::{self, Formatter};
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use group_013::{
-    prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
     Curve, Group, GroupEncoding, UncompressedEncoding,
+    prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
 };
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -17,10 +17,10 @@ use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTi
 #[cfg(feature = "alloc")]
 use group_013::WnafGroup;
 
+use crate::Scalar;
 use crate::fp::Fp;
 use crate::fp2::Fp2;
 use crate::util::decode_hex_into_slice;
-use crate::Scalar;
 use elliptic_curve_013::ops::{LinearCombination, MulByGenerator};
 use elliptic_curve_013::point::AffineCoordinates;
 use elliptic_curve_013::{
@@ -534,7 +534,7 @@ impl G2Affine {
         Self::from_compressed(&buf)
     }
 
-    /// Attempts to deserialize a uncompressed element hex string. See [`notes::serialization`](crate::notes::serialization)
+    /// Attempts to deserialize an uncompressed element hex string. See [`notes::serialization`](crate::notes::serialization)
     /// for details about how group elements are serialized.
     pub fn from_uncompressed_hex(hex: &str) -> CtOption<Self> {
         let mut buf = [0u8; Self::UNCOMPRESSED_BYTES];
@@ -1170,7 +1170,7 @@ impl G2Projective {
         Self::sswu_map(&u).isogeny_map().clear_cofactor()
     }
 
-    /// simplified swu map for q = 9 mod 16 where AB == 0
+    /// Simplified SWU map for q = 9 mod 16 where AB == 0.
     fn sswu_map(u: &Fp2) -> Self {
         const A: Fp2 = Fp2 {
             c0: Fp::ZERO,
@@ -1363,7 +1363,7 @@ impl_from_bytes!(G2Compressed, |p: &G2Compressed| p.0, |arr: &[u8]| {
     ))
 });
 
-/// Group2 in it's uncompressed form
+/// A G2 point in uncompressed form.
 #[derive(Clone, Copy)]
 pub struct G2Uncompressed([u8; 192]);
 
@@ -1651,10 +1651,10 @@ fn test_is_on_curve() {
         ]),
     };
 
-    let gen = G2Affine::generator();
+    let generator = G2Affine::generator();
     let mut test = G2Projective {
-        x: gen.x * z,
-        y: gen.y * z,
+        x: generator.x * z,
+        y: generator.y * z,
         z,
     };
 

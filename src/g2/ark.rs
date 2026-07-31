@@ -5,8 +5,8 @@ use ark_serialize::{
     CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid, Validate,
     Write,
 };
-use group_013::cofactor::CofactorGroup;
 use group_013::Group;
+use group_013::cofactor::CofactorGroup;
 use num_traits::Zero;
 use rand::Rng;
 

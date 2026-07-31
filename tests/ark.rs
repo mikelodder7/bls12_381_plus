@@ -1,14 +1,13 @@
 #[cfg(feature = "ark")]
 mod ark_tests {
     use ark_poly::{
-        univariate::DensePolynomial, DenseUVPolynomial, EvaluationDomain, GeneralEvaluationDomain,
+        DenseUVPolynomial, EvaluationDomain, GeneralEvaluationDomain, univariate::DensePolynomial,
     };
     use bls12_381_plus::{G1Projective, Scalar};
-    use ff::Field;
 
     #[test]
     fn fft() {
-        let tau = Scalar::random(&mut rand::rngs::OsRng);
+        let tau = Scalar::from(2u64);
         let mut t_poly_coeffs = vec![tau; 5];
         t_poly_coeffs[1] = t_poly_coeffs[0] * tau;
         t_poly_coeffs[2] = t_poly_coeffs[1] * tau;

@@ -549,7 +549,7 @@ impl Fp {
     /// Compute the modular square root of this field element
     #[inline]
     pub fn sqrt(&self) -> CtOption<Self> {
-        // We use Shank's method, as p = 3 (mod 4). This means
+        // We use Shanks' method, as p = 3 (mod 4). This means
         // we only need to exponentiate by (p+1)/4. This only
         // works for elements that are actually quadratic residue,
         // so we check that we got the correct result at the end.

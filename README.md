@@ -1,9 +1,9 @@
-# bls12_381_plus [![Crates.io](https://img.shields.io/crates/v/bls12_381_plus.svg)](https://crates.io/crates/bls12_381_plus) #
+# bls12_381_plus [![Crates.io](https://img.shields.io/crates/v/bls12_381_plus.svg)](https://crates.io/crates/bls12_381_plus)
 
-This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction with [hash to curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html) and multiexponentiation methods like Straus and Pippenger.
+This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction with [hash-to-curve](https://www.rfc-editor.org/rfc/rfc9380.html) and multi-exponentiation methods such as Straus and Pippenger.
 
 * **This implementation has not been reviewed or audited. Use at your own risk.**
-* This implementation targets Rust `1.56` or later.
+* This implementation targets Rust `1.87` or later.
 * This implementation does not require the Rust standard library.
 * All operations are constant time unless explicitly noted.
 
@@ -12,20 +12,19 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `bits` (on by default): Enables APIs for obtaining bit iterators for scalars.
 * `groups` (on by default): Enables APIs for performing group arithmetic with G1, G2, and GT.
 * `pairings` (on by default): Enables some APIs for performing pairings.
-* `hashing` (on by default): Enables hash to curve methods as defined by [IETF](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1).
 * `alloc` (on by default): Enables APIs that require an allocator; these include pairing optimizations.
-* `nightly`: Enables `subtle/nightly` which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
-* `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
-  * Hashing to curves ([Internet Draft v12](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12))
+* `ark`: Enables compatibility with the arkworks ecosystem and the Rust standard library.
+* `expose-fields`: Exposes the internal field modules; this also enables `groups`.
+* `std`: Enables APIs that require the Rust standard library.
 
-## [Documentation](https://docs.rs/bls12_381)
+## [Documentation](https://docs.rs/bls12_381_plus)
 
 ## Testing
 
 Test for non-wasm32 targets:
 
 ```sh
-cargo test
+cargo test --all-features
 ```
 
 Test wasm32 targets:

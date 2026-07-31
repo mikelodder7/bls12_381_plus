@@ -1,10 +1,11 @@
-# 0.9.0-rc0
+# 0.9.0
 
-- Release candidate for `0.9.0`.
-- Pinned core crypto trait dependencies to exact latest compatible patch releases.
+- Updated core cryptography trait dependencies to their latest compatible patch releases.
 - Bumped `criterion` to `0.8.2`.
-- Use `elliptic-curve-tools` for faster small/medium-size sum-of-products with `alloc`.
-- Added aliased `elliptic-curve`, `ff`, and `group` `0.14` compatibility while preserving `0.13` traits for `pairing`.
+- Used `elliptic-curve-tools` for faster small- and medium-sized sums of products with `alloc`.
+- Added `elliptic-curve`, `ff`, and `group` `0.14` compatibility while preserving the `0.13` traits required by `pairing`.
+- Added arkworks compatibility behind the `ark` feature.
+- Implemented `IsHigh` for the field and scalar types.
 
 # 0.8.11
 
@@ -74,7 +75,7 @@
 ## Added
 - `bits` feature flag (on by default) that exposes an `ff::PrimeFieldBits` implementation
   on `bls12_381::Scalar`.
-- `experimental` feature flag, for features have no backwards-compatibility guarantees and
+- `experimental` feature flag, for features that have no backwards-compatibility guarantees and
   may change at any time.
 - Hashing to curves ([Internet Draft v11](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11)),
   behind the `experimental` feature flag.

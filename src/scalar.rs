@@ -15,10 +15,10 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
 use elliptic_curve_013::{
+    ScalarPrimitive,
     bigint::{Encoding, U256, U384, U512},
     ops::{Invert, Reduce},
     scalar::{FromUintUnchecked, IsHigh},
-    ScalarPrimitive,
 };
 
 use crate::Bls12381G1;
@@ -49,11 +49,7 @@ impl fmt::Display for Scalar {
 
 impl From<bool> for Scalar {
     fn from(bit: bool) -> Self {
-        if bit {
-            Self::ONE
-        } else {
-            Self::ZERO
-        }
+        if bit { Self::ONE } else { Self::ZERO }
     }
 }
 
@@ -1466,7 +1462,7 @@ impl Reduce<U512> for Scalar {
     }
 }
 
-#[cfg(target_pointer_width = "32")]
+#[cfg(all(target_pointer_width = "32", not(target_arch = "wasm32")))]
 fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
     let raw = scalar.to_raw();
     let mut i = 0;
@@ -1775,7 +1771,9 @@ fn test_from_u512_max() {
     let max_u64 = 0xffff_ffff_ffff_ffff;
     assert_eq!(
         R3 - R,
-        Scalar::from_u512([max_u64, max_u64, max_u64, max_u64, max_u64, max_u64, max_u64, max_u64])
+        Scalar::from_u512([
+            max_u64, max_u64, max_u64, max_u64, max_u64, max_u64, max_u64, max_u64
+        ])
     );
 }
 
@@ -2135,13 +2133,17 @@ fn test_shr() {
 
 #[test]
 fn test_reduce() {
-    let mut t = U384::from_be_hex("0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    let mut t = U384::from_be_hex(
+        "0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+    );
     t <<= 2;
     t = t.wrapping_add(&U384::ONE);
     let m = Scalar::reduce(t);
     assert_eq!(m, Scalar::ONE);
 
-    let mut t = U512::from_be_hex("000000000000000000000000000000000000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    let mut t = U512::from_be_hex(
+        "000000000000000000000000000000000000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+    );
     t = t.wrapping_mul(&(U512::ONE.wrapping_add(&U512::ONE).wrapping_add(&U512::ONE)));
     t = t.wrapping_add(&U512::ONE);
     t = t.wrapping_add(&U512::ONE);

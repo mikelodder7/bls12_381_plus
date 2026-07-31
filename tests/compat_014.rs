@@ -1,10 +1,12 @@
 #[cfg(feature = "pairings")]
 use bls12_381_plus::Gt;
 use bls12_381_plus::Scalar;
-use bls12_381_plus::{elliptic_curve_014, ff_014, group_014};
 use bls12_381_plus::{Bls12381G1, Bls12381G2, G1Affine, G1Projective, G2Affine, G2Projective};
+use bls12_381_plus::{elliptic_curve as elliptic_curve_014, ff as ff_014, group as group_014};
 
 fn assert_prime_field<F: ff_014::PrimeField>() {}
+
+fn assert_is_high<S: elliptic_curve_014::scalar::IsHigh>() {}
 
 fn assert_prime_curve<C: elliptic_curve_014::PrimeCurve>() {}
 
@@ -20,6 +22,7 @@ fn assert_wnaf_group<G: group_014::WnafGroup>() {}
 #[test]
 fn scalar_implements_ff_014() {
     assert_prime_field::<Scalar>();
+    assert_is_high::<Scalar>();
 
     let value = Scalar::from(42u64);
     let repr = <Scalar as ff_014::PrimeField>::to_repr(&value);

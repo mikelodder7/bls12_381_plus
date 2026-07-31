@@ -212,6 +212,7 @@ macro_rules! impl_binops_multiplicative {
 
 macro_rules! impl_pippenger_sum_of_products {
     () => {
+        #[cfg(feature = "alloc")]
         const SUM_OF_PRODUCTS_STRAUS_THRESHOLD: usize = 128;
 
         /// Use pippenger multi-exponentiation method to compute

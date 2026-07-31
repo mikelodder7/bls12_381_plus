@@ -6,22 +6,24 @@ authors = [
 ]
 description = """
 Implementation of the BLS12-381 pairing-friendly elliptic curve construction.
-This is a fork from zkcrypto/bls12_381 but adds hash to curve and multiexponentiation methods
-as well as enables multi-pairing without the allocator requirement.
+This is a fork of zkcrypto/bls12_381 that adds hash-to-curve and multi-exponentiation methods
+and enables multi-pairing without requiring an allocator.
 """
 documentation = "https://docs.rs/bls12_381_plus/"
+exclude = ["AGENTS.md"]
 homepage = "https://github.com/mikelodder7/bls12_381_plus"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.9.0-rc1"
-edition = "2021"
+version = "0.9.0"
+edition = "2024"
+rust-version = "1.87"
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dev-dependencies]
 ark-poly = "0.4.2"

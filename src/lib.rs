@@ -1,10 +1,10 @@
-//! # `bls12_381`
+//! # `bls12_381_plus`
 //!
 //! This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 //! curve construction.
 //!
 //! * **This implementation has not been reviewed or audited. Use at your own risk.**
-//! * This implementation targets Rust `1.36` or later.
+//! * This implementation targets Rust `1.87` or later.
 //! * This implementation does not require the Rust standard library.
 //! * All operations are constant time unless explicitly noted.
 
@@ -86,27 +86,29 @@ mod fp12;
 mod fp6;
 
 use elliptic_curve_013::{
+    Curve, FieldBytes, FieldBytesEncoding, PrimeCurve,
     bigint::{ArrayEncoding, U384},
     consts::U48,
     point::PointCompression,
-    Curve, FieldBytes, FieldBytesEncoding, PrimeCurve,
 };
 
-/// An engine for operations generic G1 operations
+/// An engine for generic G1 operations.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bls12381G1;
 
 unsafe impl Send for Bls12381G1 {}
 unsafe impl Sync for Bls12381G1 {}
 
-/// An engine for operations generic G2 operations
+/// An engine for generic G2 operations.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bls12381G2;
 
 impl Curve for Bls12381G1 {
     type FieldBytesSize = U48;
     type Uint = U384;
-    const ORDER: U384 = U384::from_be_hex("0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    const ORDER: U384 = U384::from_be_hex(
+        "0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+    );
 }
 
 impl PrimeCurve for Bls12381G1 {}
@@ -128,7 +130,9 @@ impl FieldBytesEncoding<Bls12381G1> for U384 {
 impl Curve for Bls12381G2 {
     type FieldBytesSize = U48;
     type Uint = U384;
-    const ORDER: U384 = U384::from_be_hex("0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001");
+    const ORDER: U384 = U384::from_be_hex(
+        "0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+    );
 }
 
 impl PrimeCurve for Bls12381G2 {}
@@ -157,9 +161,9 @@ const BLS_X_IS_NEGATIVE: bool = true;
 mod pairings;
 
 #[cfg(feature = "pairings")]
-pub use pairings::{pairing, Bls12, Gt, MillerLoopResult};
+pub use pairings::{Bls12, Gt, MillerLoopResult, pairing};
 
 #[cfg(feature = "pairings")]
-pub use pairings::{multi_miller_loop, G2Prepared};
+pub use pairings::{G2Prepared, multi_miller_loop};
 
 mod isogeny;
