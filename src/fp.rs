@@ -2,19 +2,13 @@
 //! where `p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab`
 
 use crate::G1Projective;
+use crate::hash_to_curve::{SecurityLevel, Sgn0, evaluate_iso, expand_message};
 use core::convert::TryFrom;
 use core::fmt;
 use core::iter::{Iterator, Product, Sum};
 use core::ops::{Add, AddAssign, BitOr, Mul, MulAssign, Neg, Sub, SubAssign};
-use elliptic_curve_013::{
-    bigint::{ByteArray, U512},
-    consts::U16,
-    hash2curve::{
-        ExpandMsg, Expander, FromOkm, Isogeny, IsogenyCoefficients, MapToCurve, OsswuMap,
-        OsswuMapParams, Sgn0,
-    },
-};
 use ff_013::Field;
+use hash2curve::ExpandMsg;
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -174,15 +168,6 @@ impl<'b> Mul<&'b Fp> for &Fp {
 impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
-impl FromOkm for Fp {
-    type Length = <U512 as elliptic_curve_013::bigint::ArrayEncoding>::ByteSize;
-
-    fn from_okm(data: &ByteArray<U512>) -> Self {
-        let input = arrayref::array_ref![data, 0, 64];
-        Self::from_random_bytes(*input)
-    }
-}
-
 impl Sgn0 for Fp {
     fn sgn0(&self) -> Choice {
         let bytes = self.to_bytes();
@@ -190,81 +175,85 @@ impl Sgn0 for Fp {
     }
 }
 
-impl OsswuMap for Fp {
-    const PARAMS: OsswuMapParams<Self> = OsswuMapParams {
-        c1: &[
-            0xee7f_bfff_ffff_eaaau64,
-            0x07aa_ffff_ac54_ffffu64,
-            0xd9cc_34a8_3dac_3d89u64,
-            0xd91d_d2e1_3ce1_44afu64,
-            0x92c6_e9ed_90d2_eb35u64,
-            0x0680_447a_8e5f_f9a6u64,
-        ],
-        c2: Fp([
-            0x43b5_71ca_d321_5f1fu64,
-            0xccb4_60ef_1c70_2dc2u64,
-            0x742d_884f_4f97_100bu64,
-            0xdb2c_3e32_38a3_382bu64,
-            0xe40f_3fa1_3fce_8f88u64,
-            0x0073_a2af_9892_a2ffu64,
-        ]),
-        map_a: Fp([
-            0x2f65_aa0e_9af5_aa51u64,
-            0x8646_4c2d_1e84_16c3u64,
-            0xb85c_e591_b7bd_31e2u64,
-            0x27e1_1c91_b5f2_4e7cu64,
-            0x2837_6eda_6bfc_1835u64,
-            0x1554_55c3_e507_1d85u64,
-        ]),
-        map_b: Fp([
-            0xfb99_6971_fe22_a1e0u64,
-            0x9aa9_3eb3_5b74_2d6fu64,
-            0x8c47_6013_de99_c5c4u64,
-            0x873e_27c3_a221_e571u64,
-            0xca72_b5e4_5a52_d888u64,
-            0x0682_4061_418a_386bu64,
-        ]),
-        z: Fp([
-            0x886c00000023ffdcu64,
-            0xf70008d3090001du64,
-            0x77672417ed5828c3u64,
-            0x9dac23e943dc1740u64,
-            0x50553f1b9c131521u64,
-            0x78c712fbe0ab6e8u64,
-        ]),
-    };
+/// Simplified SWU constant `c1 = (p - 3) / 4`.
+const SSWU_C1: [u64; 6] = [
+    0xee7f_bfff_ffff_eaaau64,
+    0x07aa_ffff_ac54_ffffu64,
+    0xd9cc_34a8_3dac_3d89u64,
+    0xd91d_d2e1_3ce1_44afu64,
+    0x92c6_e9ed_90d2_eb35u64,
+    0x0680_447a_8e5f_f9a6u64,
+];
+/// Simplified SWU constant `c2 = sqrt(-Z^3)`.
+const SSWU_C2: Fp = Fp([
+    0x43b5_71ca_d321_5f1fu64,
+    0xccb4_60ef_1c70_2dc2u64,
+    0x742d_884f_4f97_100bu64,
+    0xdb2c_3e32_38a3_382bu64,
+    0xe40f_3fa1_3fce_8f88u64,
+    0x0073_a2af_9892_a2ffu64,
+]);
+/// The `A'` coefficient of the 11-isogenous curve.
+const SSWU_A: Fp = Fp([
+    0x2f65_aa0e_9af5_aa51u64,
+    0x8646_4c2d_1e84_16c3u64,
+    0xb85c_e591_b7bd_31e2u64,
+    0x27e1_1c91_b5f2_4e7cu64,
+    0x2837_6eda_6bfc_1835u64,
+    0x1554_55c3_e507_1d85u64,
+]);
+/// The `B'` coefficient of the 11-isogenous curve.
+const SSWU_B: Fp = Fp([
+    0xfb99_6971_fe22_a1e0u64,
+    0x9aa9_3eb3_5b74_2d6fu64,
+    0x8c47_6013_de99_c5c4u64,
+    0x873e_27c3_a221_e571u64,
+    0xca72_b5e4_5a52_d888u64,
+    0x0682_4061_418a_386bu64,
+]);
+/// The non-square `Z` used by the simplified SWU map.
+const SSWU_Z: Fp = Fp([
+    0x886c00000023ffdcu64,
+    0xf70008d3090001du64,
+    0x77672417ed5828c3u64,
+    0x9dac23e943dc1740u64,
+    0x50553f1b9c131521u64,
+    0x78c712fbe0ab6e8u64,
+]);
 
+impl Fp {
+    /// Maps this element to a point on the 11-isogenous curve with the simplified SWU map.
     fn osswu(&self) -> (Self, Self) {
-        let xd1 = Self::PARAMS.z.mul(&Self::PARAMS.map_a);
+        let xd1 = SSWU_Z.mul(&SSWU_A);
 
         // tv1 = u^2
         let tv1 = self.square();
         // tv3 = Z * tv1
-        let tv3 = Self::PARAMS.z * tv1;
+        let tv3 = SSWU_Z * tv1;
         // tv2 = tv3^2
         let mut tv2 = tv3.square();
         // xd = tv2 + tv3
         let mut xd = tv2 + tv3;
         // x1n = xd + 1
         // x1n = x1n * B
-        let x1n = (xd + Fp::ONE) * Self::PARAMS.map_b;
+        let x1n = (xd + Fp::ONE) * SSWU_B;
         // xd = -A * xd
-        xd *= Self::PARAMS.map_a.neg();
+        xd *= SSWU_A.neg();
         // xd = CMOV(xd, Z * A, xd == 0)
         xd.conditional_assign(&xd1, xd.is_zero());
         // tv2 = xd^2
         tv2 = xd.square();
         let gxd = tv2 * xd;
-        tv2 *= Self::PARAMS.map_a;
+        tv2 *= SSWU_A;
         let mut gx1 = (x1n.square() + tv2) * x1n;
-        tv2 = Self::PARAMS.map_b * gxd;
+        tv2 = SSWU_B * gxd;
         gx1 += tv2;
         let mut tv4 = gxd.square();
         tv2 = gx1 * gxd;
         tv4 *= tv2;
-        let y1 = tv4.pow_vartime(arrayref::array_ref![Self::PARAMS.c1, 0, 6]) * tv2;
+        let y1 = tv4.pow_vartime(&SSWU_C1) * tv2;
         let mut x2n = tv3 * x1n;
-        let mut y2 = y1 * Self::PARAMS.c2 * tv1 * self;
+        let mut y2 = y1 * SSWU_C2 * tv1 * self;
         tv2 = y1.square() * gxd;
         let e2 = ((tv2 == gx1) as u8).into();
 
@@ -276,30 +265,30 @@ impl OsswuMap for Fp {
 
         (x2n * xd.invert().unwrap(), y2)
     }
-}
 
-impl MapToCurve for Fp {
-    type Output = G1Projective;
+    /// Maps this element to a point on G1 (RFC 9380 section 6.6.3), before cofactor clearing.
+    pub(crate) fn map_to_curve(&self) -> G1Projective {
+        use crate::isogeny::g1::*;
 
-    fn map_to_curve(&self) -> Self::Output {
-        let (rx, ry) = self.osswu();
-        let (qx, qy) = Fp::isogeny(rx, ry);
+        let (x, y) = self.osswu();
+        let mut xs = [Fp::ONE; 16];
+        let mut power = Fp::ONE;
+        for xi in xs.iter_mut().skip(1) {
+            power *= x;
+            *xi = power;
+        }
+
+        let x_num = evaluate_iso(&xs, &XNUM, Fp::ZERO);
+        let x_den = evaluate_iso(&xs, &XDEN, Fp::ZERO);
+        let y_num = evaluate_iso(&xs, &YNUM, Fp::ZERO);
+        let y_den = evaluate_iso(&xs, &YDEN, Fp::ZERO);
+
         G1Projective {
-            x: qx,
-            y: qy,
+            x: x_num * x_den.invert().unwrap(),
+            y: y * y_num * y_den.invert().unwrap(),
             z: Fp::ONE,
         }
     }
-}
-
-impl Isogeny for Fp {
-    type Degree = U16;
-    const COEFFICIENTS: IsogenyCoefficients<Self> = IsogenyCoefficients {
-        xnum: &crate::isogeny::g1::XNUM,
-        xden: &crate::isogeny::g1::XDEN,
-        ynum: &crate::isogeny::g1::YNUM,
-        yden: &crate::isogeny::g1::YDEN,
-    };
 }
 
 impl Field for Fp {
@@ -933,27 +922,18 @@ impl Fp {
 
     pub(crate) fn hash<X>(msg: &[u8], dst: &[u8]) -> [Fp; 2]
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
-        let dst = [dst];
-        let mut random_bytes = [0u8; 128];
-        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
-        expander.fill_bytes(&mut random_bytes);
-        [
-            Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[..64]).unwrap()),
-            Fp::from_random_bytes(<[u8; 64]>::try_from(&random_bytes[64..]).unwrap()),
-        ]
+        let random_bytes = expand_message::<X, 128>(msg, dst);
+        let (u0, u1) = arrayref::array_refs![&random_bytes, 64, 64];
+        [Fp::from_random_bytes(*u0), Fp::from_random_bytes(*u1)]
     }
 
     pub(crate) fn encode<X>(msg: &[u8], dst: &[u8]) -> Fp
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
-        let dst = [dst];
-        let mut random_bytes = [0u8; 64];
-        let mut expander = X::expand_message(&[msg], &dst, random_bytes.len()).unwrap();
-        expander.fill_bytes(&mut random_bytes);
-        Fp::from_random_bytes(random_bytes)
+        Fp::from_random_bytes(expand_message::<X, 64>(msg, dst))
     }
 }
 

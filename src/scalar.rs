@@ -14,14 +14,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "bits")]
 use core::convert::TryInto;
-use elliptic_curve_013::{
-    ScalarPrimitive,
-    bigint::{Encoding, U256, U384, U512},
-    ops::{Invert, Reduce},
-    scalar::{FromUintUnchecked, IsHigh},
-};
-
-use crate::Bls12381G1;
+use elliptic_curve::bigint::{U256, U384, U512};
 #[cfg(feature = "bits")]
 use ff_013::{FieldBits, PrimeFieldBits};
 
@@ -862,15 +855,9 @@ impl Scalar {
     /// Hashes the input messages and domain separation tag to a `Scalar`
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> elliptic_curve_013::hash2curve::ExpandMsg<'a>,
+        X: hash2curve::ExpandMsg<crate::hash_to_curve::SecurityLevel>,
     {
-        use elliptic_curve_013::hash2curve::Expander;
-
-        let d = [dst];
-        let mut expander = X::expand_message(&[msg], &d, 48).unwrap();
-        let mut out = [0u8; 48];
-        expander.fill_bytes(&mut out);
-        Scalar::from_okm(&out)
+        Scalar::from_okm(&crate::hash_to_curve::expand_message::<X, 48>(msg, dst))
     }
 }
 
@@ -1128,59 +1115,9 @@ impl ScalarLe for Scalar {
     }
 }
 
-impl From<ScalarPrimitive<Bls12381G1>> for Scalar {
-    fn from(value: ScalarPrimitive<Bls12381G1>) -> Self {
-        Self::from_uint_unchecked(*value.as_uint())
-    }
-}
-
-impl From<&ScalarPrimitive<Bls12381G1>> for Scalar {
-    fn from(value: &ScalarPrimitive<Bls12381G1>) -> Self {
-        Self::from_uint_unchecked(*value.as_uint())
-    }
-}
-
-impl From<Scalar> for ScalarPrimitive<Bls12381G1> {
-    fn from(value: Scalar) -> Self {
-        ScalarPrimitive::from(&value)
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
-    fn from(value: &Scalar) -> Self {
-        #[cfg(target_pointer_width = "64")]
-        {
-            let mut out = [0u64; 6];
-            out[..4].copy_from_slice(&value.to_raw());
-            ScalarPrimitive::new(U384::from_words(out)).unwrap()
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let mut out = [0u32; 12];
-            raw_scalar_to_32bit_le_array(value, &mut out);
-            ScalarPrimitive::new(U384::from_words(out)).unwrap()
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl From<&Scalar> for ScalarPrimitive<Bls12381G1> {
-    fn from(value: &Scalar) -> Self {
-        let mut out = [0u32; 12];
-        let arr = value.to_raw();
-        // convert from [u64;4] to [u32;8]
-        for i in 0..4 {
-            out[2 * i] = (arr[i] >> 32) as u32;
-            out[2 * i + 1] = arr[i] as u32;
-        }
-        ScalarPrimitive::new(U384::from_words(out)).unwrap()
-    }
-}
-
 impl From<[u8; 48]> for Scalar {
     fn from(value: [u8; 48]) -> Self {
-        Self::from_uint_unchecked(U384::from_be_slice(&value))
+        Self::from_okm(&value)
     }
 }
 
@@ -1194,158 +1131,39 @@ impl From<Scalar> for [u8; 48] {
 
 impl From<U256> for Scalar {
     fn from(value: U256) -> Self {
-        Self::reduce(value)
+        Self::from(value.resize::<{ U384::LIMBS }>())
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U256 {
     fn from(value: Scalar) -> Self {
-        #[cfg(target_pointer_width = "64")]
-        {
-            let arr = value.to_raw();
-            U256::from_words(arr)
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let mut out = [0u32; 8];
-            raw_scalar_to_32bit_le_array(&value, &mut out);
-            U256::from_words(out)
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl From<Scalar> for U256 {
-    fn from(value: Scalar) -> Self {
-        let arr = value.to_raw();
-        // convert from [u64;4] to [u32;8]
-        let mut arr32 = [0u32; 8];
-        for i in 0..4 {
-            arr32[2 * i] = (arr[i] >> 32) as u32;
-            arr32[2 * i + 1] = arr[i] as u32;
-        }
-        arr32.reverse();
-        U256::from_words(arr32)
+        U256::from_le_slice(&value.to_le_bytes())
     }
 }
 
 impl From<U384> for Scalar {
     fn from(value: U384) -> Self {
-        Self::from_uint_unchecked(value)
+        let bytes = value.to_be_bytes();
+        Self::from_okm(arrayref::array_ref![bytes, 0, 48])
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U384 {
     fn from(value: Scalar) -> Self {
-        #[cfg(target_pointer_width = "64")]
-        {
-            let raw = value.to_raw();
-            let arr = [0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
-            U384::from_words(arr)
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let mut arr = [0u32; 12];
-            raw_scalar_to_32bit_le_array(&value, &mut arr);
-            U384::from_words(arr)
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl From<Scalar> for U384 {
-    fn from(value: Scalar) -> Self {
-        let raw = value.to_raw();
-        // convert from [u64;4] to [u32;12]
-        let mut arr = [0u32; 12];
-        for i in 0..4 {
-            arr[2 * i] = (raw[i] >> 32) as u32;
-            arr[2 * i + 1] = raw[i] as u32;
-        }
-        arr.reverse();
-        U384::from_words(arr)
+        U256::from(value).resize()
     }
 }
 
 impl From<U512> for Scalar {
     fn from(value: U512) -> Self {
-        Self::reduce(value)
+        let bytes = value.to_le_bytes();
+        Self::from_bytes_wide(arrayref::array_ref![bytes, 0, 64])
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<Scalar> for U512 {
     fn from(value: Scalar) -> Self {
-        #[cfg(target_pointer_width = "64")]
-        {
-            let raw = value.to_raw();
-            let arr = [0u64, 0u64, 0u64, 0u64, raw[3], raw[2], raw[1], raw[0]];
-            U512::from_words(arr)
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let mut arr = [0u32; 16];
-            raw_scalar_to_32bit_le_array(&value, &mut arr);
-            U512::from_words(arr)
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl From<Scalar> for U512 {
-    fn from(value: Scalar) -> Self {
-        let raw = value.to_raw();
-        // convert from [u64;4] to [u32;16]
-        let mut arr = [0u32; 16];
-        for i in 0..4 {
-            arr[2 * i] = (raw[i] >> 32) as u32;
-            arr[2 * i + 1] = raw[i] as u32;
-        }
-        arr.reverse();
-        U512::from_words(arr)
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl FromUintUnchecked for Scalar {
-    type Uint = U384;
-
-    fn from_uint_unchecked(uint: Self::Uint) -> Self {
-        let mut out = [0u64; 4];
-        #[cfg(target_pointer_width = "64")]
-        {
-            out.copy_from_slice(&uint.as_words()[..4]);
-            Scalar::from_raw_unchecked(out)
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let words = uint.as_words();
-            let mut i = 0;
-            for index in out.iter_mut() {
-                *index = (words[i + 1] as u64) << 32;
-                *index |= words[i] as u64;
-                i += 2;
-            }
-            Scalar::from_raw_unchecked(out)
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl FromUintUnchecked for Scalar {
-    type Uint = U384;
-
-    fn from_uint_unchecked(uint: Self::Uint) -> Self {
-        let mut out = [0u64; 4];
-        let arr = uint.as_words();
-        // convert from [u32;8] to [u64;4]
-        for i in 0..4 {
-            out[i] = (arr[2 * i] as u64) << 32 | arr[2 * i + 1] as u64;
-        }
-        out.reverse();
-        Scalar::from_raw_unchecked(out)
+        U256::from(value).resize()
     }
 }
 
@@ -1359,20 +1177,6 @@ impl_from_bytes!(Scalar, |s: &Scalar| s.to_be_bytes(), |arr: &[u8]| {
     })?;
     Ok::<CtOption<Scalar>, alloc::string::String>(Scalar::from_be_bytes(&tmp))
 });
-
-impl Invert for Scalar {
-    type Output = CtOption<Self>;
-
-    fn invert(&self) -> Self::Output {
-        self.invert()
-    }
-}
-
-impl IsHigh for Scalar {
-    fn is_high(&self) -> Choice {
-        scalar_is_high(self)
-    }
-}
 
 impl elliptic_curve::scalar::IsHigh for Scalar {
     fn is_high(&self) -> Choice {
@@ -1408,141 +1212,30 @@ impl core::ops::ShrAssign<usize> for Scalar {
     }
 }
 
-impl Reduce<U256> for Scalar {
-    type Bytes = [u8; 32];
-
-    fn reduce(n: U256) -> Self {
-        let mut out = [0u8; 48];
-        out[16..].copy_from_slice(&n.to_be_bytes());
-        Self::from_okm(&out)
-    }
-
-    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U256::from_be_slice(bytes))
-    }
-}
-
-impl Reduce<U384> for Scalar {
-    type Bytes = [u8; 48];
-
-    fn reduce(n: U384) -> Self {
-        Self::from_okm(&n.to_be_bytes())
-    }
-
-    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U384::from_be_slice(bytes))
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl Reduce<U512> for Scalar {
-    type Bytes = [u8; 64];
-
-    fn reduce(n: U512) -> Self {
-        #[cfg(target_pointer_width = "64")]
-        {
-            Self::from_u512(*n.as_words())
-        }
-        #[cfg(target_pointer_width = "32")]
-        {
-            let words = n.as_words();
-            let mut arr = [0u64; 8];
-            let mut i = 0;
-            for index in arr.iter_mut() {
-                *index = (words[i + 1] as u64) << 32;
-                *index |= words[i] as u64;
-                i += 2;
-            }
-            Self::from_u512(arr)
-        }
-    }
-
-    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U512::from_be_slice(bytes))
-    }
-}
-
-#[cfg(all(target_pointer_width = "32", not(target_arch = "wasm32")))]
-fn raw_scalar_to_32bit_le_array(scalar: &Scalar, arr: &mut [u32]) {
-    let raw = scalar.to_raw();
-    let mut i = 0;
-    let mut j = 0;
-
-    while j < raw.len() {
-        arr[i] = raw[j] as u32;
-        arr[i + 1] = (raw[j] >> 32) as u32;
-
-        i += 2;
-        j += 1;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Reduce<U512> for Scalar {
-    type Bytes = [u8; 64];
-
-    fn reduce(n: U512) -> Self {
-        let words = n.as_words();
-        let mut arr = [0u64; 8];
-        let mut i = 0;
-        for index in arr.iter_mut() {
-            *index = (words[i + 1] as u64) << 32;
-            *index |= words[i] as u64;
-            i += 2;
-        }
-        Self::from_u512(arr)
-    }
-
-    fn reduce_bytes(bytes: &Self::Bytes) -> Self {
-        Self::reduce(U512::from_be_slice(bytes))
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
 /// This function gets imported and called by ./tests/wasm.rs to run the same tests this module
 /// runs, only in wasm32.
 pub fn run_test_wasm() {
-    // test all 6 functions with target arch = "wasm32"
-    // They are:
-    // 1. impl From<&Scalar> for ScalarPrimitive<Bls12381G1>
-    // 2. impl From<Scalar> for ScalarPrimitive<Bls12381G1>
-    // 3. impl From<&Scalar> for U384
-    // 4. impl From<Scalar> for U384
-    // 5. impl From<&Scalar> for U512
-    // 6. impl From<Scalar> for U512
+    test_uint_round_trip();
+}
 
-    // test 1
+/// Checks that `Scalar` round-trips through every supported `Uint` width.
+#[cfg(any(test, target_arch = "wasm32"))]
+fn test_uint_round_trip() {
     let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-    let s_prim = ScalarPrimitive::from(&s);
-    let s_prim2 = ScalarPrimitive::from(&s);
-    assert_eq!(s_prim, s_prim2);
+    assert_eq!(s, Scalar::from(U256::from(s)));
+    assert_eq!(s, Scalar::from(U384::from(s)));
+    assert_eq!(s, Scalar::from(U512::from(s)));
+    assert_eq!(U256::from(s).resize::<{ U384::LIMBS }>(), U384::from(s));
+    assert_eq!(
+        U256::from_be_hex("0000000000000000000000000000000000000000000000000000000000000001"),
+        U256::from(Scalar::ONE)
+    );
+}
 
-    // test 2
-    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-    let s_prim = ScalarPrimitive::from(s);
-    let s_prim2 = ScalarPrimitive::from(s);
-    assert_eq!(s_prim, s_prim2);
-
-    // test 3
-    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-
-    let u: &U384 = &s.into();
-    assert_eq!(u, &U384::from(s));
-
-    // test 4
-    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-    let u: U384 = s.into();
-    assert_eq!(u, U384::from(s));
-
-    // test 5
-    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-    let u: &U512 = &s.into();
-    assert_eq!(u, &U512::from(s));
-
-    // test 6
-    let s = Scalar::from_raw_unchecked([1u64, 2u64, 3u64, 4u64]);
-    let u = U512::from(s);
-    assert_eq!(u, U512::from(s));
+#[test]
+fn test_uint_conversions() {
+    test_uint_round_trip();
 }
 
 #[test]
@@ -2138,7 +1831,7 @@ fn test_reduce() {
     );
     t <<= 2;
     t = t.wrapping_add(&U384::ONE);
-    let m = Scalar::reduce(t);
+    let m = Scalar::from(t);
     assert_eq!(m, Scalar::ONE);
 
     let mut t = U512::from_be_hex(
@@ -2149,7 +1842,7 @@ fn test_reduce() {
     t = t.wrapping_add(&U512::ONE);
     t = t.wrapping_add(&U512::ONE);
 
-    let m = Scalar::reduce(t);
+    let m = Scalar::from(t);
     assert_eq!(m, Scalar::ONE + Scalar::ONE + Scalar::ONE);
 }
 
@@ -2168,6 +1861,6 @@ fn test_from_vec() {
         let res: Result<Scalar, alloc::string::String> = bytes.clone().try_into();
         assert!(res.is_ok());
         let s = res.unwrap();
-        assert_eq!(bytes, <&Scalar as Into<alloc::vec::Vec<u8>>>::into(&s));
+        assert_eq!(bytes, alloc::vec::Vec::<u8>::from(&s));
     }
 }

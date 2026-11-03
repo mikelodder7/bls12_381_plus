@@ -19,14 +19,10 @@ use group_013::WnafGroup;
 
 use crate::Scalar;
 use crate::fp::Fp;
+use crate::hash_to_curve::SecurityLevel;
 use crate::util::decode_hex_into_slice;
-use elliptic_curve_013::hash2curve::{ExpandMsgXmd, Sgn0};
-use elliptic_curve_013::ops::{LinearCombination, MulByGenerator};
-use elliptic_curve_013::point::AffineCoordinates;
-use elliptic_curve_013::{
-    group::cofactor::CofactorGroup,
-    hash2curve::{ExpandMsg, MapToCurve},
-};
+use group_013::cofactor::CofactorGroup;
+use hash2curve::{ExpandMsg, ExpandMsgXmd};
 
 /// This is an element of $\mathbb{G}_1$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -227,19 +223,9 @@ const B: Fp = Fp::from_raw_unchecked([
     0x09d6_4551_3d83_de7e,
 ]);
 
-impl AffineCoordinates for G1Affine {
-    type FieldRepr = [u8; 48];
-
-    fn x(&self) -> Self::FieldRepr {
-        self.x.to_bytes()
-    }
-
-    fn y_is_odd(&self) -> Choice {
-        self.y.sgn0()
-    }
-}
-
 impl G1Affine {
+    impl_affine_sum_of_products!(G1Projective);
+
     /// Bytes to represent this point compressed
     pub const COMPRESSED_BYTES: usize = 48;
     /// Bytes to represent this point uncompressed
@@ -756,10 +742,6 @@ fn mul_by_3b(a: Fp) -> Fp {
     a + a + a // 12
 }
 
-impl MulByGenerator for G1Projective {}
-
-impl LinearCombination for G1Projective {}
-
 impl G1Projective {
     /// Bytes to represent this point compressed
     pub const COMPRESSED_BYTES: usize = 48;
@@ -1058,7 +1040,7 @@ impl G1Projective {
     /// Use a random oracle to map a value to a curve point
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
         {
             let u = Fp::hash::<X>(msg, dst);
@@ -1070,7 +1052,7 @@ impl G1Projective {
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
         let u = Fp::encode::<X>(msg, dst);
         u.map_to_curve().clear_cofactor()
@@ -2111,7 +2093,7 @@ fn test_sum_of_products_alloc() {
 
 #[test]
 fn test_hash() {
-    use elliptic_curve_013::hash2curve::ExpandMsgXmd;
+    use hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
     const DST: &[u8] = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
 
@@ -2157,4 +2139,33 @@ fn test_hex() {
     let g2 = G1Affine::from_uncompressed_hex(&hex).map(G1Projective::from);
     assert_eq!(g2.is_some().unwrap_u8(), 1u8);
     assert_eq!(g1, g2.unwrap());
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn test_affine_sum_of_products() {
+    use ff_013::Field;
+    use rand_core::SeedableRng;
+    use rand_xorshift::XorShiftRng;
+
+    let mut rng = XorShiftRng::from_seed([
+        0x59, 0x62, 0xbe, 0x5d, 0x76, 0x3d, 0x31, 0x8d, 0x17, 0xdb, 0x37, 0x32, 0x54, 0x06, 0xbc,
+        0xe5,
+    ]);
+
+    // Cover both the Straus path and the Pippenger path (128+ terms).
+    for size in [10, 130] {
+        let points: alloc::vec::Vec<G1Affine> = (0..size)
+            .map(|_| G1Projective::random(&mut rng).to_affine())
+            .collect();
+        let scalars: alloc::vec::Vec<Scalar> =
+            (0..size).map(|_| Scalar::random(&mut rng)).collect();
+
+        let naive = points
+            .iter()
+            .zip(&scalars)
+            .fold(G1Projective::IDENTITY, |acc, (p, s)| acc + p * s);
+
+        assert_eq!(naive, G1Affine::sum_of_products(&points, &scalars));
+    }
 }

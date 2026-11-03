@@ -534,3 +534,18 @@ macro_rules! impl_from_bytes {
         }
     };
 }
+
+macro_rules! impl_affine_sum_of_products {
+    ($projective:ident) => {
+        /// Computes the sum of each affine point multiplied by its scalar.
+        ///
+        /// Converts the points to projective form and calls the projective
+        /// `sum_of_products`, so this is constant time with respect to the scalars.
+        #[cfg(feature = "alloc")]
+        pub fn sum_of_products(points: &[Self], scalars: &[Scalar]) -> $projective {
+            let points: alloc::vec::Vec<$projective> =
+                points.iter().copied().map($projective::from).collect();
+            $projective::sum_of_products(&points, scalars)
+        }
+    };
+}

@@ -20,13 +20,10 @@ use group_013::WnafGroup;
 use crate::Scalar;
 use crate::fp::Fp;
 use crate::fp2::Fp2;
+use crate::hash_to_curve::{SecurityLevel, Sgn0, evaluate_iso};
 use crate::util::decode_hex_into_slice;
-use elliptic_curve_013::ops::{LinearCombination, MulByGenerator};
-use elliptic_curve_013::point::AffineCoordinates;
-use elliptic_curve_013::{
-    group::cofactor::CofactorGroup,
-    hash2curve::{ExpandMsg, Sgn0},
-};
+use group_013::cofactor::CofactorGroup;
+use hash2curve::ExpandMsg;
 
 /// This is an element of $\mathbb{G}_2$ represented in the affine coordinate space.
 /// It is ideal to keep elements in this representation to reduce memory usage and
@@ -239,22 +236,9 @@ const B: Fp2 = Fp2 {
 
 const B3: Fp2 = Fp2::add(&Fp2::add(&B, &B), &B);
 
-impl AffineCoordinates for G2Affine {
-    type FieldRepr = [u8; 96];
-
-    fn x(&self) -> Self::FieldRepr {
-        let mut res = [0u8; 96];
-        res[0..48].copy_from_slice(&self.x.c1.to_bytes()[..]);
-        res[48..96].copy_from_slice(&self.x.c0.to_bytes()[..]);
-        res
-    }
-
-    fn y_is_odd(&self) -> Choice {
-        self.y.sgn0()
-    }
-}
-
 impl G2Affine {
+    impl_affine_sum_of_products!(G2Projective);
+
     /// Bytes to represent this point compressed
     pub const COMPRESSED_BYTES: usize = 96;
     /// Bytes to represent this point uncompressed
@@ -760,10 +744,6 @@ fn mul_by_3b(x: Fp2) -> Fp2 {
     x * B3
 }
 
-impl MulByGenerator for G2Projective {}
-
-impl LinearCombination for G2Projective {}
-
 impl G2Projective {
     /// Bytes to represent this point compressed
     pub const COMPRESSED_BYTES: usize = 96;
@@ -1150,7 +1130,7 @@ impl G2Projective {
     /// Use a random oracle to map a value to a curve point
     pub fn hash<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
         {
             let u = Fp2::hash::<X>(msg, dst);
@@ -1164,7 +1144,7 @@ impl G2Projective {
     /// Use injective encoding to map a value to a curve point
     pub fn encode<X>(msg: &[u8], dst: &[u8]) -> Self
     where
-        X: for<'a> ExpandMsg<'a>,
+        X: ExpandMsg<SecurityLevel>,
     {
         let u = Fp2::encode::<X>(msg, dst);
         Self::sswu_map(&u).isogeny_map().clear_cofactor()
@@ -1279,23 +1259,15 @@ impl G2Projective {
     fn isogeny_map(&self) -> Self {
         use crate::isogeny::g2::*;
 
-        fn compute(xxs: &[Fp2], k: &[Fp2]) -> Fp2 {
-            let mut xx = Fp2::ZERO;
-            for i in 0..k.len() {
-                xx += xxs[i] * k[i];
-            }
-            xx
-        }
-
         let mut xs = [Fp2::ONE; 4];
         xs[1] = self.x;
         xs[2] = self.x.square();
         xs[3] = xs[2] * self.x;
 
-        let x_num = compute(&xs, &XNUM);
-        let x_den = compute(&xs, &XDEN);
-        let y_num = compute(&xs, &YNUM);
-        let y_den = compute(&xs, &YDEN);
+        let x_num = evaluate_iso(&xs, &XNUM, Fp2::ZERO);
+        let x_den = evaluate_iso(&xs, &XDEN, Fp2::ZERO);
+        let y_num = evaluate_iso(&xs, &YNUM, Fp2::ZERO);
+        let y_den = evaluate_iso(&xs, &YDEN, Fp2::ZERO);
 
         let x = x_num * x_den.invert().unwrap();
         let y = self.y * y_num * y_den.invert().unwrap();
@@ -2587,7 +2559,7 @@ fn test_commutative_scalar_subgroup_multiplication() {
 
 #[test]
 fn test_hash() {
-    use elliptic_curve_013::hash2curve::ExpandMsgXmd;
+    use hash2curve::ExpandMsgXmd;
     use std::convert::TryFrom;
     const DST: &[u8] = b"QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_";
 
@@ -2704,4 +2676,33 @@ fn test_hex() {
     let g2 = G2Affine::from_uncompressed_hex(&hex).map(G2Projective::from);
     assert_eq!(g2.is_some().unwrap_u8(), 1u8);
     assert_eq!(g1, g2.unwrap());
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn test_affine_sum_of_products() {
+    use ff_013::Field;
+    use rand_core::SeedableRng;
+    use rand_xorshift::XorShiftRng;
+
+    let mut rng = XorShiftRng::from_seed([
+        0x59, 0x62, 0xbe, 0x5d, 0x76, 0x3d, 0x31, 0x8d, 0x17, 0xdb, 0x37, 0x32, 0x54, 0x06, 0xbc,
+        0xe5,
+    ]);
+
+    // Cover both the Straus path and the Pippenger path (128+ terms).
+    for size in [10, 130] {
+        let points: alloc::vec::Vec<G2Affine> = (0..size)
+            .map(|_| G2Projective::random(&mut rng).to_affine())
+            .collect();
+        let scalars: alloc::vec::Vec<Scalar> =
+            (0..size).map(|_| Scalar::random(&mut rng)).collect();
+
+        let naive = points
+            .iter()
+            .zip(&scalars)
+            .fold(G2Projective::IDENTITY, |acc, (p, s)| acc + p * s);
+
+        assert_eq!(naive, G2Affine::sum_of_products(&points, &scalars));
+    }
 }
