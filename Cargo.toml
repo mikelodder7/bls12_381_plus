@@ -15,7 +15,7 @@ homepage = "https://github.com/mikelodder7/bls12_381_plus"
 license = "MIT OR Apache-2.0"
 name = "bls12_381_plus"
 repository = "https://github.com/mikelodder7/bls12_381_plus"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2024"
 rust-version = "1.87"
 
@@ -31,7 +31,7 @@ hex = "0.4"
 rand_xorshift = "0.3"
 serde_bare = "0.5"
 serde_json = "1.0"
-sha2 = "0.10"
+sha2 = "0.11"
 sha3 = "0.10"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
@@ -44,12 +44,6 @@ wasm-bindgen-test = "0.3"
 name = "groups"
 harness = false
 required-features = ["groups"]
-
-[dependencies.elliptic_curve_013]
-package = "elliptic-curve"
-version = "0.13.8"
-features = ["hash2curve", "hazmat"]
-default-features = false
 
 [dependencies.ff_013]
 package = "ff"
@@ -91,7 +85,7 @@ default-features = false
 version = "0.3"
 
 [dependencies.sha2]
-version = "0.10"
+version = "0.11"
 default-features = false
 
 [dependencies.ff]
@@ -107,6 +101,10 @@ optional = true
 version = "0.14.1"
 default-features = false
 features = ["arithmetic"]
+
+[dependencies.hash2curve]
+version = "0.14.0"
+default-features = false
 
 [dependencies.elliptic-curve-tools]
 version = "0.3.0"

@@ -179,17 +179,17 @@ impl elliptic_curve::point::PointCompression for Bls12381G2 {
 mod groups {
     use crate::g1::{G1Compressed, G1Uncompressed};
     use crate::g2::{G2Compressed, G2Uncompressed};
+    use crate::hash_to_curve::Sgn0;
     use crate::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
+    use elliptic_curve::array::Array;
     use elliptic_curve::consts::{U48, U96};
     use elliptic_curve::rand_core::TryRng;
-    use elliptic_curve_013::generic_array::GenericArray;
-    use elliptic_curve_013::hash2curve::ExpandMsgXmd;
-    use elliptic_curve_013::hash2curve::Sgn0;
     use group::{Curve, CurveAffine, Group, GroupEncoding, UncompressedEncoding};
+    use hash2curve::ExpandMsgXmd;
     use subtle::{Choice, CtOption};
 
     impl elliptic_curve::point::AffineCoordinates for G1Affine {
-        type FieldRepr = GenericArray<u8, U48>;
+        type FieldRepr = Array<u8, U48>;
 
         fn from_coordinates(x: &Self::FieldRepr, y: &Self::FieldRepr) -> CtOption<Self> {
             let mut bytes = [0u8; G1Affine::UNCOMPRESSED_BYTES];
@@ -199,11 +199,11 @@ mod groups {
         }
 
         fn x(&self) -> Self::FieldRepr {
-            GenericArray::<u8, U48>::clone_from_slice(&self.x.to_bytes())
+            Array::<u8, U48>::from(self.x.to_bytes())
         }
 
         fn y(&self) -> Self::FieldRepr {
-            GenericArray::<u8, U48>::clone_from_slice(&self.y.to_bytes())
+            Array::<u8, U48>::from(self.y.to_bytes())
         }
 
         fn x_is_odd(&self) -> Choice {
@@ -348,7 +348,7 @@ mod groups {
     }
 
     impl elliptic_curve::point::AffineCoordinates for G2Affine {
-        type FieldRepr = GenericArray<u8, U96>;
+        type FieldRepr = Array<u8, U96>;
 
         fn from_coordinates(x: &Self::FieldRepr, y: &Self::FieldRepr) -> CtOption<Self> {
             let mut bytes = [0u8; G2Affine::UNCOMPRESSED_BYTES];
@@ -358,14 +358,14 @@ mod groups {
         }
 
         fn x(&self) -> Self::FieldRepr {
-            let mut res = GenericArray::<u8, U96>::default();
+            let mut res = Array::<u8, U96>::default();
             res[0..48].copy_from_slice(&self.x.c1.to_bytes()[..]);
             res[48..96].copy_from_slice(&self.x.c0.to_bytes()[..]);
             res
         }
 
         fn y(&self) -> Self::FieldRepr {
-            let mut res = GenericArray::<u8, U96>::default();
+            let mut res = Array::<u8, U96>::default();
             res[0..48].copy_from_slice(&self.y.c1.to_bytes()[..]);
             res[48..96].copy_from_slice(&self.y.c0.to_bytes()[..]);
             res

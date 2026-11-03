@@ -17,6 +17,29 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `expose-fields`: Exposes the internal field modules; this also enables `groups`.
 * `std`: Enables APIs that require the Rust standard library.
 
+## Trait compatibility
+
+* `elliptic-curve`, `ff`, and `group` `0.14` traits are implemented for `Scalar`, the G1/G2 types, and the `Bls12381G1`/`Bls12381G2` curve markers.
+* The `ff` and `group` `0.13` traits are also implemented, because `pairing` `0.23` needs them. They are re-exported as `ff_013` and `group_013`.
+* `elliptic-curve` `0.13` is no longer supported as of `0.10.0`.
+
+## Hashing to curve
+
+Hash-to-curve follows RFC 9380 and takes any `hash2curve` `0.14` `ExpandMsg` at the 128-bit security level:
+
+```rust
+use bls12_381_plus::{G1Projective, G2Projective, Scalar};
+use hash2curve::ExpandMsgXmd;
+use sha2::Sha256;
+
+let msg = b"message";
+let p = G1Projective::hash::<ExpandMsgXmd<Sha256>>(msg, b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_");
+let q = G2Projective::hash::<ExpandMsgXmd<Sha256>>(msg, b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_");
+let s = Scalar::hash::<ExpandMsgXmd<Sha256>>(msg, b"my-scalar-dst");
+```
+
+This needs `hash2curve = "0.14"` and `sha2 = "0.11"` in your `Cargo.toml`. The DST must be non-empty, or these functions panic.
+
 ## [Documentation](https://docs.rs/bls12_381_plus)
 
 ## Testing

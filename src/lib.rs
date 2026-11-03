@@ -31,7 +31,6 @@ extern crate alloc;
 extern crate std;
 
 pub use elliptic_curve;
-pub use elliptic_curve_013;
 pub use ff;
 pub use ff_013;
 #[cfg(feature = "groups")]
@@ -85,13 +84,6 @@ pub use g2::{G2Compressed, G2Uncompressed};
 mod fp12;
 mod fp6;
 
-use elliptic_curve_013::{
-    Curve, FieldBytes, FieldBytesEncoding, PrimeCurve,
-    bigint::{ArrayEncoding, U384},
-    consts::U48,
-    point::PointCompression,
-};
-
 /// An engine for generic G1 operations.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bls12381G1;
@@ -102,54 +94,6 @@ unsafe impl Sync for Bls12381G1 {}
 /// An engine for generic G2 operations.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bls12381G2;
-
-impl Curve for Bls12381G1 {
-    type FieldBytesSize = U48;
-    type Uint = U384;
-    const ORDER: U384 = U384::from_be_hex(
-        "0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
-    );
-}
-
-impl PrimeCurve for Bls12381G1 {}
-
-impl PointCompression for Bls12381G1 {
-    const COMPRESS_POINTS: bool = true;
-}
-
-impl FieldBytesEncoding<Bls12381G1> for U384 {
-    fn decode_field_bytes(field_bytes: &FieldBytes<Bls12381G1>) -> Self {
-        U384::from_be_byte_array(*field_bytes)
-    }
-
-    fn encode_field_bytes(&self) -> FieldBytes<Bls12381G1> {
-        self.to_be_byte_array()
-    }
-}
-
-impl Curve for Bls12381G2 {
-    type FieldBytesSize = U48;
-    type Uint = U384;
-    const ORDER: U384 = U384::from_be_hex(
-        "0000000000000000000000000000000073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
-    );
-}
-
-impl PrimeCurve for Bls12381G2 {}
-
-impl PointCompression for Bls12381G2 {
-    const COMPRESS_POINTS: bool = true;
-}
-
-impl FieldBytesEncoding<Bls12381G2> for U384 {
-    fn decode_field_bytes(field_bytes: &FieldBytes<Bls12381G2>) -> Self {
-        U384::from_be_byte_array(*field_bytes)
-    }
-
-    fn encode_field_bytes(&self) -> FieldBytes<Bls12381G2> {
-        self.to_be_byte_array()
-    }
-}
 
 /// The BLS parameter x for BLS12-381 is -0xd201000000010000
 #[cfg(feature = "groups")]
@@ -166,4 +110,5 @@ pub use pairings::{Bls12, Gt, MillerLoopResult, pairing};
 #[cfg(feature = "pairings")]
 pub use pairings::{G2Prepared, multi_miller_loop};
 
+mod hash_to_curve;
 mod isogeny;
